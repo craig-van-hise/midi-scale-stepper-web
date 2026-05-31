@@ -1,0 +1,396 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useMidiStore } from '../store/useMidiStore';
+import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { whiteKeys, blackKeys, NoteRects } from './keyboardMap';
+
+export const WHITE_KEY_WIDTH = 19;
+export const WHITE_KEY_HEIGHT = 58;
+export const BLACK_KEY_WIDTH = 11;
+export const BLACK_KEY_HEIGHT = 37;
+export const TOTAL_WIDTH = 988; // 52 white keys * 19px
+
+
+
+const getNoteName = (midi: number) => {
+  const pcs = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  return `${pcs[midi % 12]}${Math.floor(midi / 12) - 1}`;
+};
+
+export const getNoteCenterX = (note: number) => {
+  const clampedNote = Math.max(21, Math.min(108, note));
+  const whiteKeyIndices = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
+  const isWhite = [0, 2, 4, 5, 7, 9, 11].includes(clampedNote % 12);
+  
+  const whiteKeysBeforeIn88 = (Math.floor(clampedNote / 12) * 7 + whiteKeyIndices[clampedNote % 12]) - 12;
+  
+  if (isWhite) {
+    return (whiteKeysBeforeIn88 + 0.5) * WHITE_KEY_WIDTH;
+  } else {
+    return (whiteKeysBeforeIn88 + 1) * WHITE_KEY_WIDTH;
+  }
+};
+
+export const getClosestNote = (x: number) => {
+  let minNote = 21;
+  let minDist = Infinity;
+  for (let i = 21; i <= 108; i++) {
+    const cx = getNoteCenterX(i);
+    const dist = Math.abs(cx - x);
+    if (dist < minDist) {
+      minDist = dist;
+      minNote = i;
+    }
+  }
+  return minNote;
+};
+
+const MODE_DESCRIPTIONS = {
+  octave_wrap: 'Folds out-of-range notes by shifting them up or down by octaves until they fit.',
+  smart_wrap: 'Wraps out-of-bounds notes to the opposite end of the range, strictly locking to the same pitch class.'
+};
+
+interface RangeSliderProps {
+  min: number;
+  max: number;
+  value: [number, number];
+  onValueChange: (val: [number, number]) => void;
+}
+
+export const RangeSlider: React.FC<RangeSliderProps> = ({ min, max, value, onValueChange }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [draggingThumb, setDraggingThumb] = useState<'min' | 'max' | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent, thumb: 'min' | 'max') => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setDraggingThumb(thumb);
+  };
+
+  const handlePointerMove = useCallback((e: PointerEvent) => {
+    if (!draggingThumb || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const note = getClosestNote(x);
+
+    let newMin = value[0];
+    let newMax = value[1];
+
+    if (draggingThumb === 'min') {
+      newMin = Math.min(Math.max(note, min), value[1]);
+    } else {
+      newMax = Math.max(Math.min(note, max), value[0]);
+    }
+
+    if (newMin !== value[0] || newMax !== value[1]) {
+      onValueChange([newMin, newMax]);
+    }
+  }, [draggingThumb, value, min, max, onValueChange]);
+
+  const handlePointerUp = useCallback(() => {
+    if (draggingThumb) {
+      setDraggingThumb(null);
+    }
+  }, [draggingThumb]);
+
+  useEffect(() => {
+    if (draggingThumb) {
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+    }
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [draggingThumb, handlePointerMove, handlePointerUp]);
+
+  const x1 = getNoteCenterX(value[0]);
+  const x2 = getNoteCenterX(value[1]);
+
+  return (
+    <div style={{ width: `${TOTAL_WIDTH}px`, display: 'flex', flexDirection: 'column' }}>
+      <div 
+        ref={containerRef}
+        style={{ width: `${TOTAL_WIDTH}px`, height: '32px', position: 'relative', touchAction: 'none' }}
+        className="select-none mx-auto"
+      >
+        {/* Background Track */}
+        <div className="absolute top-[22px] left-0 right-0 h-[4px] bg-neutral-200 rounded-full" />
+        
+        {/* Active Range Track */}
+        <div 
+          className="absolute top-[22px] h-[4px] bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+          style={{ left: `${x1}px`, width: `${x2 - x1}px` }} 
+        />
+
+        {/* Thumbs */}
+        <Thumb x={x1} value={value[0]} type="min" onPointerDown={(e) => handlePointerDown(e, 'min')} isDragging={draggingThumb === 'min'} />
+        <Thumb x={x2} value={value[1]} type="max" onPointerDown={(e) => handlePointerDown(e, 'max')} isDragging={draggingThumb === 'max'} />
+      </div>
+    </div>
+  );
+};
+
+interface ThumbProps {
+  x: number;
+  value: number;
+  type: 'min' | 'max';
+  onPointerDown: (e: React.PointerEvent) => void;
+  isDragging: boolean;
+}
+
+const Thumb: React.FC<ThumbProps> = ({ x, value, type, onPointerDown, isDragging }) => {
+  return (
+    <div 
+      onPointerDown={onPointerDown}
+      className={`absolute top-[0px] flex flex-col items-center justify-center -translate-x-1/2 ${isDragging ? 'cursor-grabbing z-20' : 'cursor-grab z-10'}`}
+      style={{ left: `${x}px` }}
+      data-testid={`thumb-${type}`}
+    >
+      <div className="bg-neutral-900 border border-blue-500 text-white font-mono text-[10px] leading-none px-1.5 py-0.5 rounded shadow-lg mb-[2px] pointer-events-none whitespace-nowrap">
+        {getNoteName(value)}
+      </div>
+      <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="pointer-events-none drop-shadow-md">
+         <path d="M7 15L0 8V3C0 1.34315 1.34315 0 3 0H11C12.6569 0 14 1.34315 14 3V8L7 15Z" fill="#171717" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round"/>
+         <line x1="7" y1="3" x2="7" y2="7" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
+};
+
+interface Piano88FilterProps {
+  minRange: number;
+  maxRange: number;
+}
+
+export const Piano88Filter: React.FC<Piano88FilterProps> = ({ minRange, maxRange }) => {
+  const outputActiveKeys = useMidiStore((state) => state.uiState.outputActiveKeys);
+
+  return (
+    <div
+      id="piano-container-88"
+      data-testid="piano-container-88"
+      className="relative flex w-[988px] h-[58px] bg-white pointer-events-auto border-t border-[#7a7a7a]"
+      style={{
+        boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+      }}
+    >
+      {whiteKeys.map((n) => {
+        const isOutOfRange = n < minRange || n > maxRange;
+        const isC = n % 12 === 0;
+        const octave = Math.floor(n / 12) - 1;
+        const isKeyPressed = outputActiveKeys.includes(n);
+
+        return (
+          <div
+            key={n}
+            id={`pk88f-${n}`}
+            data-testid={`white-key-${n}`}
+            className="relative flex items-end justify-center pb-[4px]"
+            style={{
+              width: '19px',
+              height: '58px',
+              flexShrink: 0,
+              backgroundColor: isKeyPressed ? '#3b82f6' : '#ffffff',
+              borderLeft: '1px solid #7a7a7a',
+              borderRight: '1px solid #7a7a7a',
+              borderBottom: '1px solid #7a7a7a',
+              borderTop: 'none',
+              borderBottomLeftRadius: '4px',
+              borderBottomRightRadius: '4px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {isOutOfRange && (
+              <div style={{
+                position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.15)', pointerEvents: 'none', zIndex: 1
+              }} data-testid={`dim-w-${n}`} />
+            )}
+            {isC && (
+              <span 
+                style={{
+                  color: isKeyPressed ? '#ffffff' : '#111827',
+                  fontWeight: '600',
+                  fontSize: '10px',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  zIndex: 2
+                }}
+              >
+                C{octave}
+              </span>
+            )}
+          </div>
+        );
+      })}
+
+      {blackKeys.map((n) => {
+        const isOutOfRange = n < minRange || n > maxRange;
+        const isKeyPressed = outputActiveKeys.includes(n);
+
+        return (
+          <div
+            key={n}
+            id={`pk88f-${n}`}
+            data-testid={`black-key-${n}`}
+            className="absolute z-10"
+            style={{
+              left: `${NoteRects[n].x}px`,
+              top: '-1px',
+              width: '11px',
+              height: '37px',
+              backgroundColor: isKeyPressed ? '#3b82f6' : '#3a3a3a',
+              borderBottom: '8px solid #050505',
+              borderLeft: '2px solid #050505',
+              borderRight: '2px solid #050505',
+              borderTop: 'none',
+              borderRadius: '0px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {isOutOfRange && (
+              <div style={{
+                position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', pointerEvents: 'none', zIndex: 12
+              }} data-testid={`dim-b-${n}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+interface NoteRangeFilterKeyboardProps {
+  activeMode?: 'octave_wrap' | 'smart_wrap';
+  onModeChange?: (mode: 'octave_wrap' | 'smart_wrap') => void;
+  range?: [number, number];
+  onRangeChange?: (range: [number, number]) => void;
+}
+
+export const NoteRangeFilterKeyboard: React.FC<NoteRangeFilterKeyboardProps> = ({
+  activeMode: externalMode,
+  onModeChange: externalOnModeChange,
+  range: externalRange,
+  onRangeChange: externalOnRangeChange
+}) => {
+  const store = useMidiStore();
+
+  const activeMode = externalMode !== undefined ? externalMode : store.globalSettings.filterMode;
+  const onModeChange = (mode: 'octave_wrap' | 'smart_wrap') => {
+    if (externalOnModeChange !== undefined) {
+      externalOnModeChange(mode);
+    } else {
+      store.setFilterMode(mode);
+    }
+  };
+
+  const range = externalRange !== undefined ? externalRange : store.globalSettings.filterRange;
+  const onRangeChange = (r: [number, number]) => {
+    if (externalOnRangeChange !== undefined) {
+      externalOnRangeChange(r);
+    } else {
+      store.setFilterRange(r);
+    }
+  };
+
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  return (
+    <div 
+      className={`relative bg-white rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.15)] outline-none w-[1020px] flex flex-col focus:ring-4 ring-blue-100 select-none transition-all duration-300 ${isCollapsed ? 'h-[40px] overflow-hidden pt-1 pb-1 px-[16px]' : 'pt-[36px] pb-[16px] px-[16px]'}`}
+      data-testid="outer-card"
+      tabIndex={0}
+    >
+      {/* Collapse Toggle */}
+      <div 
+        className="absolute top-[10px] left-[14px] flex items-center gap-1.5 cursor-pointer z-30 opacity-70 hover:opacity-100 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsCollapsed(!isCollapsed);
+        }}
+        title="Toggle Keyboard"
+      >
+        {isCollapsed ? (
+          <ChevronDown className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+        ) : (
+          <ChevronUp className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+        )}
+        <span className="font-semibold text-[14px] text-gray-700 select-none font-sans">Output</span>
+      </div>
+
+      {/* Output Settings Gear Icon */}
+      <div 
+        className="absolute top-[10px] right-[14px] flex items-center z-30 cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+        title="Output Filter Settings"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsSettingsOpen(true);
+        }}
+      >
+        <Settings 
+          className="w-4 h-4 text-gray-700 pointer-events-none" 
+          strokeWidth={2.5}
+        />
+      </div>
+
+      {/* Inline Modal for Output Settings */}
+      {isSettingsOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+          onClick={() => setIsSettingsOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-gray-100 p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold font-sans text-gray-800 mb-4">
+              Output Settings
+            </h2>
+            <span className="text-[12px] font-bold text-gray-500 uppercase tracking-wider font-sans">Filter Mode</span>
+            <div className="flex flex-col gap-2 mt-2">
+              {['octave_wrap', 'smart_wrap'].map((mode) => (
+                <label 
+                  key={mode} 
+                  title={MODE_DESCRIPTIONS[mode as keyof typeof MODE_DESCRIPTIONS]}
+                  className="flex items-center gap-2 cursor-pointer text-[13px] hover:bg-neutral-50 p-1.5 rounded w-full font-sans" 
+                  data-testid={`filter-mode-option-${mode}`}
+                >
+                  <input 
+                    type="radio" 
+                    name="filterMode" 
+                    value={mode} 
+                    checked={activeMode === mode} 
+                    onChange={() => onModeChange(mode as 'octave_wrap' | 'smart_wrap')}
+                    className="accent-blue-500 cursor-pointer"
+                  />
+                  <span className="font-semibold text-gray-800">
+                    {mode === 'octave_wrap' ? 'Octave Wrap' : 'Smart Wrap'}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="mt-6 w-full py-2 bg-gray-950 hover:bg-gray-900 text-white font-semibold rounded-lg text-sm transition-colors cursor-pointer"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isCollapsed && (
+        <div className="relative w-[988px] mx-auto flex flex-col items-center gap-1" data-testid="coordinate-lock-container">
+          <RangeSlider 
+            min={21} 
+            max={108} 
+            value={range} 
+            onValueChange={onRangeChange} 
+          />
+          <Piano88Filter minRange={range[0]} maxRange={range[1]} />
+        </div>
+      )}
+    </div>
+  );
+};
