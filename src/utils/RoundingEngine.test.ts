@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { roundToScale } from './RoundingEngine';
+import { roundToScale, calculateDynamicStepOffset } from './RoundingEngine';
+import { useMidiStore } from '../store/useMidiStore';
 
 describe('RoundingEngine (Algorithm 2)', () => {
   const cMajorPentatonic = [0, 2, 4, 7, 9]; // C, D, E, G, A
@@ -34,5 +35,34 @@ describe('RoundingEngine (Algorithm 2)', () => {
     // Rounding DOWN: 0 - 1 = -1 -> 11 (B, in scale), decrement octave -> B3 (59).
     const scaleWithoutC = [2, 4, 7, 9, 11];
     expect(roundToScale(60, scaleWithoutC, 'DOWN')).toBe(59);
+  });
+});
+
+describe('calculateDynamicStepOffset', () => {
+  it('C Maj Pentatonic, Round Up: rawMidi = 65 (F) rounds to 67 (G), offset should be +3', () => {
+    // C Maj Pentatonic is 2741 decimal ID: C(0), D(2), E(4), G(7), A(9)
+    // C(60) is step 0.
+    // D(62) is step 1.
+    // E(64) is step 2.
+    // G(67) is step 3.
+    // So 65 (F) rounds up to 67 (G), which is step +3.
+    useMidiStore.setState({
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+      }
+    });
+
+    const offset = calculateDynamicStepOffset(65, 2741, 'UP');
+    expect(offset).toBe(3);
+  });
+
+  it('Any scale: rawMidi = 60, offset should be 0', () => {
+    const offset = calculateDynamicStepOffset(60, 2741, 'UP');
+    expect(offset).toBe(0);
   });
 });

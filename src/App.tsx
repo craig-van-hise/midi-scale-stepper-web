@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWebMidi } from './hooks/useWebMidi';
+import { useSynth } from './hooks/useSynth';
 import { initializeLUT } from './utils/lutRegistry';
 import Header from './components/Header';
 import SettingsModal from './components/SettingsModal';
@@ -12,11 +13,13 @@ import { useMidiStore } from './store/useMidiStore';
 
 export default function App() {
   const { inputs, error, loading } = useWebMidi();
+  useSynth();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   const activeState = useMidiStore((state) => state.activeState);
   const setLutReady = useMidiStore((state) => state.setLutReady);
+  const power = useMidiStore((state) => state.globalSettings.power);
 
   // Initialize the scale lookup table on mount — signal store when done
   useEffect(() => {
@@ -37,7 +40,9 @@ export default function App() {
       />
 
       {/* Main Layout */}
-      <main className="flex-1 flex flex-col items-start gap-3 px-4 md:px-8 py-8 max-w-[1600px] w-full mx-auto">
+      <main className={`flex-1 flex flex-col items-center gap-3 px-4 md:px-8 py-8 max-w-[1600px] w-full mx-auto transition-all duration-300 ${
+        !power ? 'opacity-50 pointer-events-none select-none grayscale-[0.5]' : ''
+      }`}>
         {/* MIDI Connection Status Card */}
         {error && (
           <div className="w-full max-w-md bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 font-semibold text-sm">
@@ -46,22 +51,22 @@ export default function App() {
         )}
 
         {/* Input Keyboard splits component */}
-        <div className="w-full">
+        <div className="w-full flex justify-center">
           <KeySplitKeyboard />
         </div>
 
         {/* KeySwitches & Stepper container */}
-        <div className="w-full">
+        <div className="w-full flex justify-center">
           <KeySwitchContainer />
         </div>
 
         {/* Scale Notation View */}
-        <div className="w-full">
+        <div className="w-full flex justify-center">
           <ScaleInspectorNotation />
         </div>
 
         {/* Output Keyboard Visualizer */}
-        <div className="w-full">
+        <div className="w-full flex justify-center">
           <NoteRangeFilterKeyboard />
         </div>
 

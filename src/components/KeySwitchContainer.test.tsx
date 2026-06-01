@@ -1,7 +1,11 @@
-
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import React from 'react';
 import KeySwitchContainer from './KeySwitchContainer';
+
+vi.mock('./ScaleKeySwitches12', () => ({
+  default: () => <div data-scales-count="12" />
+}));
 
 describe('KeySwitchContainer & Stepper Labels', () => {
   it('renders both ScaleKeySwitches12 and ScaleStepperKeySwitches25 within the shared wrapper', () => {
@@ -29,5 +33,11 @@ describe('KeySwitchContainer & Stepper Labels', () => {
     expect(queryByText('Unison')).toBeNull();
     expect(queryByText('+M2')).toBeNull();
     expect(queryByText('+P8')).toBeNull();
+  });
+
+  it('Given KeySwitchContainer renders, Assert the cog is absent', () => {
+    const { container } = render(<KeySwitchContainer />);
+    const cog = container.querySelector('#scale-change-settings-cog');
+    expect(cog).toBeNull();
   });
 });

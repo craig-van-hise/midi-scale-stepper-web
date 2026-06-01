@@ -13,6 +13,7 @@ export default function SettingsModal({ isOpen, onClose, inputs }: SettingsModal
   const setStartOctave = useMidiStore((state) => state.setStartOctave);
   const setRoundPreference = useMidiStore((state) => state.setRoundPreference);
 
+
   if (!isOpen) return null;
 
   return (
@@ -121,6 +122,7 @@ export default function SettingsModal({ isOpen, onClose, inputs }: SettingsModal
               </button>
             </div>
           </div>
+
         </div>
 
         <button

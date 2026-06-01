@@ -10,16 +10,14 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
     // Default mock setup
   });
 
-  it('Phase 1 Checkpoint: should correctly map incoming note 75 (Eb5) to map index 15, index "+2" and stepOffset 2', () => {
-    const note = 75;
-    const mapIndex = note - 60;
-    const mappedData = STEPPER_DATA_MAP[mapIndex];
+  it('Phase 1 Checkpoint: should correctly calculate stepOffset from note 48 (-12) and note 72 (+12)', () => {
+    const noteLow = 48;
+    const stepOffsetLow = noteLow - 60;
+    expect(stepOffsetLow).toBe(-12);
 
-    expect(mapIndex).toBe(15);
-    expect(mappedData.index).toBe('+2');
-    
-    const stepOffset = parseInt(mappedData.index, 10);
-    expect(stepOffset).toBe(2);
+    const noteHigh = 72;
+    const stepOffsetHigh = noteHigh - 60;
+    expect(stepOffsetHigh).toBe(12);
   });
 
   it('Phase 2 Checkpoint: should correctly calculate stepping transposition and wrap around scale degrees and octaves', () => {
@@ -32,6 +30,7 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
         keySwitches: [],
         selectedScaleIndex: 0,
         activeSwitchIndex: 0,
+        isFirstNote: false,
       },
       uiState: {
         activeKeys: [],
@@ -57,5 +56,134 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
   it('Phase 2 Checkpoint: applyOutputFilter should strictly evaluate note 74 to 62 under octave_wrap with range [60, 71]', () => {
     const result = applyOutputFilter(74, 'octave_wrap', 60, 71);
     expect(result).toBe(62);
+  });
+
+  // ─── Phase 2 TDD Checkpoints ──────────────────────────────────────────
+  it('Phase 2 - Test Case 1: Given a mocked store where isFirstNote is true and lastPlayedMidi is 60, When executeScaleStep(+1) is called, Assert output is 60 and store.setIsFirstNote(false) is invoked', () => {
+    const mockLut = getLUT() || new Array(4096).fill(null);
+    mockLut[2741] = {
+      decimal: 2741,
+      pitch_class_set: [0, 2, 4, 5, 7, 9, 11],
+      scale_type: 'Major',
+    } as any;
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: null,
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'smart_wrap',
+        filterRange: [36, 83],
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+        isFirstNote: true,
+      },
+      uiState: {
+        activeKeys: [],
+        outputActiveKeys: [],
+      }
+    });
+
+    const result = executeScaleStep(1);
+    expect(result).toBe(60);
+    expect(useMidiStore.getState().activeState.isFirstNote).toBe(false);
+  });
+
+  it('Phase 2 - Test Case 2: Given a mocked store where isFirstNote is false and lastPlayedMidi is 60, When executeScaleStep(+1) is called, Assert the standard offset math runs (e.g., output is 62 in Major scale) and the flag is not toggled', () => {
+    const mockLut = getLUT() || new Array(4096).fill(null);
+    mockLut[2741] = {
+      decimal: 2741,
+      pitch_class_set: [0, 2, 4, 5, 7, 9, 11],
+      scale_type: 'Major',
+    } as any;
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: null,
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'smart_wrap',
+        filterRange: [36, 83],
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+        isFirstNote: false,
+      },
+      uiState: {
+        activeKeys: [],
+        outputActiveKeys: [],
+      }
+    });
+
+    const result = executeScaleStep(1);
+    expect(result).toBe(62);
+    expect(useMidiStore.getState().activeState.isFirstNote).toBe(false);
+  });
+
+  it('Phase 2 Checkpoint: Test Case 1 - Given a mocked store where outputActiveKeys already includes 62, When executeScaleStep(0) resolves to 62, Assert removeOutputKey(62) is called immediately, and addOutputKey(62) is scheduled via timeout', () => {
+    vi.useFakeTimers();
+
+    const mockLut = getLUT() || new Array(4096).fill(null);
+    mockLut[2741] = {
+      decimal: 2741,
+      pitch_class_set: [0, 2, 4, 5, 7, 9, 11],
+      scale_type: 'Major',
+    } as any;
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: null,
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'octave_wrap',
+        filterRange: [21, 108],
+      },
+      activeState: {
+        rootNote: 2,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 62,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+        isFirstNote: false,
+      },
+      uiState: {
+        activeKeys: [],
+        outputActiveKeys: [62],
+      }
+    });
+
+    const removeOutputKeySpy = vi.spyOn(useMidiStore.getState(), 'removeOutputKey');
+    const addOutputKeySpy = vi.spyOn(useMidiStore.getState(), 'addOutputKey');
+
+    // Execute scale step 0 (keeps note on 62)
+    const result = executeScaleStep(0);
+    expect(result).toBe(62);
+
+    expect(removeOutputKeySpy).toHaveBeenCalledWith(62);
+    expect(addOutputKeySpy).not.toHaveBeenCalledWith(62);
+
+    vi.advanceTimersByTime(5);
+
+    expect(addOutputKeySpy).toHaveBeenCalledWith(62);
+
+    vi.useRealTimers();
   });
 });

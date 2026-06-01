@@ -36,8 +36,9 @@ export function applyOutputFilter(midiNote: number, mode: string, minRange: numb
 }
 
 export function executeScaleStep(stepOffset: number) {
-  const { lastPlayedMidi, rootNote, scaleDecimalId } = useMidiStore.getState().activeState;
-  const { filterMode, filterRange } = useMidiStore.getState().globalSettings;
+  const store = useMidiStore.getState();
+  const { lastPlayedMidi, rootNote, scaleDecimalId, isFirstNote } = store.activeState;
+  const { filterMode, filterRange } = store.globalSettings;
   const lut = getLUT();
   const entry = scaleDecimalId !== null ? lut[scaleDecimalId] : null;
 
@@ -49,23 +50,30 @@ export function executeScaleStep(stepOffset: number) {
   // 2. Define Anchor
   const currentMidi = lastPlayedMidi ?? (60 + root);
 
-  // 3. Find Current Index
-  let currentInterval = (currentMidi - root) % 12;
-  if (currentInterval < 0) currentInterval += 12;
+  let outputMidi: number;
 
-  let currentIndex = pitch_classes.indexOf(currentInterval);
-  if (currentIndex === -1) currentIndex = 0;
+  if (isFirstNote) {
+    outputMidi = currentMidi;
+    store.setIsFirstNote(false);
+  } else {
+    // 3. Find Current Index
+    let currentInterval = (currentMidi - root) % 12;
+    if (currentInterval < 0) currentInterval += 12;
 
-  // 4. Calculate New Index & Octave Shift
-  const newIndex = currentIndex + stepOffset;
-  const L = pitch_classes.length;
-  const octaveShift = Math.floor(newIndex / L);
-  const wrappedIndex = ((newIndex % L) + L) % L;
+    let currentIndex = pitch_classes.indexOf(currentInterval);
+    if (currentIndex === -1) currentIndex = 0;
 
-  // 5. Reconstruct MIDI Note
-  const targetInterval = pitch_classes[wrappedIndex];
-  const currentOctaveBase = currentMidi - currentInterval;
-  let outputMidi = currentOctaveBase + (octaveShift * 12) + targetInterval;
+    // 4. Calculate New Index & Octave Shift
+    const newIndex = currentIndex + stepOffset;
+    const L = pitch_classes.length;
+    const octaveShift = Math.floor(newIndex / L);
+    const wrappedIndex = ((newIndex % L) + L) % L;
+
+    // 5. Reconstruct MIDI Note
+    const targetInterval = pitch_classes[wrappedIndex];
+    const currentOctaveBase = currentMidi - currentInterval;
+    outputMidi = currentOctaveBase + (octaveShift * 12) + targetInterval;
+  }
 
   // Clamp to valid MIDI range
   outputMidi = Math.max(0, Math.min(127, outputMidi));
@@ -74,12 +82,26 @@ export function executeScaleStep(stepOffset: number) {
   const finalMidi = applyOutputFilter(outputMidi, filterMode, filterRange[0], filterRange[1]);
 
   // 6. State Push
-  if (lastPlayedMidi !== null) {
-    useMidiStore.getState().removeOutputKey(lastPlayedMidi);
+  // Only remove the previous note if it is fundamentally different
+  if (lastPlayedMidi !== null && lastPlayedMidi !== finalMidi) {
+    store.removeOutputKey(lastPlayedMidi);
   }
 
   if (finalMidi !== null) {
-    useMidiStore.getState().setLastPlayedMidi(finalMidi);
-    useMidiStore.getState().addOutputKey(finalMidi);
+    store.setLastPlayedMidi(finalMidi);
+    
+    if (store.uiState.outputActiveKeys.includes(finalMidi)) {
+      // Unison Repetition detected: Force choke in current tick
+      store.removeOutputKey(finalMidi);
+      
+      // Schedule Note On for next tick (5ms bypasses React batching)
+      setTimeout(() => {
+        useMidiStore.getState().addOutputKey(finalMidi);
+      }, 5);
+    } else {
+      // Standard execution
+      store.addOutputKey(finalMidi);
+    }
   }
+  return finalMidi;
 }

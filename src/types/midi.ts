@@ -1,3 +1,17 @@
+export const ZONES = {
+  HOME: { min: 21, max: 23 },
+  ROOT: { min: 24, max: 35 },
+  SCALE: { min: 36, max: 47 },
+  STEPPER: { min: 48, max: 72 },
+  PLAY_START: { min: 73, max: 108 },
+} as const;
+
+export interface PlayStartSettings {
+  audible: boolean;
+  rounded: boolean;
+  octaveOffset: number;
+}
+
 export interface PCS_Entry {
   decimal: number;
   chord_type: string;
@@ -42,19 +56,37 @@ export interface MidiState {
     filterMode: 'octave_wrap' | 'smart_wrap';
     filterRange: [number, number];
   };
-  activeState: {
-    rootNote: number | null; // e.g., 0 for C, 1 for C#
-    scaleDecimalId: number | null; // currently selected scale from 12-key selector
-    lastPlayedMidi: number | null; // used for voice-leading calculation
-    keySwitches: ScaleSwitchData[];
-    selectedScaleIndex: number;
-    activeSwitchIndex: number;
+export interface ActiveState {
+  rootNote: number | null; // e.g., 0 for C, 1 for C#
+  scaleDecimalId: number | null; // currently selected scale from 12-key selector
+  lastPlayedMidi: number | null; // used for voice-leading calculation
+  keySwitches: ScaleSwitchData[];
+  selectedScaleIndex: number;
+  activeSwitchIndex: number;
+  isFirstNote: boolean;
+}
+
+export interface MidiState {
+  globalSettings: {
+    midiInPort: string | null;
+    power: boolean; // bypass toggle
+    channelFilter: number | 'ALL';
+    startOctave: number; // 0-7
+    roundPreference: 'UP' | 'DOWN';
+    filterMode: 'octave_wrap' | 'smart_wrap';
+    filterRange: [number, number];
   };
+  activeState: ActiveState;
   uiState: {
     activeKeys: number[];     // raw MIDI input keys (all zones)
     outputActiveKeys: number[]; // stepper-processed output keys (for output keyboard)
   };
+  playStartSettings: PlayStartSettings;
+  homeSettings: {
+    audible: boolean;
+  };
   lutReady: boolean; // true once PCS_LUT.dat has finished loading
+  scaleChangeMode: 'voice-leading' | 'follow-root';
 }
 
 export interface MidiStoreActions {
@@ -71,7 +103,8 @@ export interface MidiStoreActions {
   setLastPlayedMidi: (midi: number | null) => void;
   setKeySwitches: (switches: ScaleSwitchData[]) => void;
   setSelectedScaleIndex: (index: number) => void;
-  setActiveState: (activeState: Partial<MidiState['activeState']>) => void;
+  setActiveState: (activeState: Partial<ActiveState>) => void;
+  setIsFirstNote: (isFirst: boolean) => void;
 
   addActiveKey: (key: number) => void;
   removeActiveKey: (key: number) => void;
@@ -82,6 +115,10 @@ export interface MidiStoreActions {
   clearOutputKeys: () => void;
 
   setLutReady: (ready: boolean) => void;
+  updatePlayStartSettings: (settings: Partial<PlayStartSettings>) => void;
+  updateHomeSettings: (settings: Partial<{ audible: boolean }>) => void;
+  triggerHomeReset: () => void;
+  setScaleChangeMode: (mode: 'voice-leading' | 'follow-root') => void;
   
   // Custom reset action for "Panic"
   panic: () => void;

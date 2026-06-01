@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
+import { Settings } from 'lucide-react';
+import ScaleChangeSettingsModal from './ScaleChangeSettingsModal';
 
 export interface ScaleSwitchData {
   root: string;
@@ -129,6 +131,7 @@ const ScaleKeySwitches12: React.FC = () => {
   
   const [isRootMenuOpen, setIsRootMenuOpen] = useState<boolean>(false);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const rootMenuRef = useRef<HTMLDivElement>(null);
   
@@ -139,13 +142,11 @@ const ScaleKeySwitches12: React.FC = () => {
     const pcs = STANDARD_PITCH_CLASSES[scaleObj.type] || STANDARD_PITCH_CLASSES['Major'];
     const decimal = calculateBitmaskDecimal(pcs);
     const rootPC = NOTE_TO_PC[scaleObj.root] ?? 0;
-    useMidiStore.setState((state) => ({
-      activeState: {
-        ...state.activeState,
-        scaleDecimalId: decimal,
-        rootNote: rootPC,
-      }
-    }));
+    // PRP-31: Route through setActiveState so computeNewLastPlayedMidi engine fires
+    useMidiStore.getState().setActiveState({
+      scaleDecimalId: decimal,
+      rootNote: rootPC,
+    });
   };
 
   useEffect(() => {
@@ -223,7 +224,7 @@ const ScaleKeySwitches12: React.FC = () => {
       >
         <span 
           data-testid="top-strip-root"
-          className="cursor-pointer hover:opacity-75 text-black px-1"
+          className="cursor-pointer hover:opacity-75 text-orange-500 px-1"
           style={{ position: 'relative' }}
           onClick={() => {
             setIsRootMenuOpen(!isRootMenuOpen);
@@ -279,7 +280,7 @@ const ScaleKeySwitches12: React.FC = () => {
         <span className="mx-1.5 font-normal text-gray-400">|</span>
         <span 
           data-testid="top-strip-type"
-          className="cursor-pointer hover:opacity-75 text-emerald-600 px-1"
+          className="cursor-pointer hover:opacity-75 text-black px-1"
           onClick={() => {
             setIsTypeMenuOpen(!isTypeMenuOpen);
             setIsRootMenuOpen(false);
@@ -287,6 +288,16 @@ const ScaleKeySwitches12: React.FC = () => {
         >
           {activeScale.type}
         </span>
+
+        <button
+          id="scale-change-settings-cog"
+          onClick={(e) => { e.stopPropagation(); setIsSettingsOpen(true); }}
+          style={{ position: 'absolute', right: '12px' }}
+          className="p-1 text-gray-400 hover:text-gray-800 transition-colors cursor-pointer"
+          title="Scale Change Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
 
         {/* Mock Dropdown for Type */}
         {isTypeMenuOpen && (
@@ -333,17 +344,22 @@ const ScaleKeySwitches12: React.FC = () => {
               data-key-index={noteIndex}
               style={getWhiteStyle(isSelected)}
               onClick={() => {
-                useMidiStore.setState((state) => ({
-                  activeState: { ...state.activeState, activeSwitchIndex: noteIndex }
-                }));
+                // PRP-31: Route through setActiveState (bundles index + scale/root atomically)
+                const pcs = STANDARD_PITCH_CLASSES[scales[noteIndex].type] || STANDARD_PITCH_CLASSES['Major'];
+                const decimal = calculateBitmaskDecimal(pcs);
+                const rootPC = NOTE_TO_PC[scales[noteIndex].root] ?? 0;
+                useMidiStore.getState().setActiveState({
+                  activeSwitchIndex: noteIndex,
+                  scaleDecimalId: decimal,
+                  rootNote: rootPC,
+                });
                 setIsRootMenuOpen(false);
                 setIsTypeMenuOpen(false);
-                pushScaleToStore(scales[noteIndex]);
               }}
             >
               {/* White key text labels */}
               <div className="text-[15px] text-center leading-none text-black select-none pointer-events-none">
-                <div className="font-bold">{scales[noteIndex].root}</div>
+                <div className="font-bold text-orange-500">{scales[noteIndex].root}</div>
                 <div style={{ fontSize: '12px' }} className="mt-0.5 opacity-80">{scales[noteIndex].type}</div>
               </div>
 
@@ -355,16 +371,21 @@ const ScaleKeySwitches12: React.FC = () => {
                   style={getBlackStyle(selectedIndex === blackIndex)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    useMidiStore.setState((state) => ({
-                      activeState: { ...state.activeState, activeSwitchIndex: blackIndex }
-                    }));
+                    // PRP-31: Route through setActiveState (bundles index + scale/root atomically)
+                    const pcs = STANDARD_PITCH_CLASSES[scales[blackIndex].type] || STANDARD_PITCH_CLASSES['Major'];
+                    const decimal = calculateBitmaskDecimal(pcs);
+                    const rootPC = NOTE_TO_PC[scales[blackIndex].root] ?? 0;
+                    useMidiStore.getState().setActiveState({
+                      activeSwitchIndex: blackIndex,
+                      scaleDecimalId: decimal,
+                      rootNote: rootPC,
+                    });
                     setIsRootMenuOpen(false);
                     setIsTypeMenuOpen(false);
-                    pushScaleToStore(scales[blackIndex]);
                   }}
                 >
                   <div className={`text-[12px] text-center leading-none select-none pointer-events-none ${selectedIndex === blackIndex ? 'text-black' : 'text-white'}`}>
-                    <div className="font-bold">{scales[blackIndex].root}</div>
+                    <div className="font-bold text-orange-500">{scales[blackIndex].root}</div>
                     <div style={{ fontSize: '9px' }} className="mt-0.5 opacity-80">{scales[blackIndex].type}</div>
                   </div>
                 </div>
@@ -386,6 +407,7 @@ const ScaleKeySwitches12: React.FC = () => {
           }} 
         />
       </div>
+      <ScaleChangeSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 };

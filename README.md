@@ -66,6 +66,8 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 .
 ├── PDD.md                     # Product Design Document
 ├── PRD.md                     # Product Requirements Document
+├── PROJECT_STATE.md           # Project state and module description
+├── README.md                  # Main developer documentation
 ├── index.html
 ├── package.json
 ├── public
@@ -76,11 +78,18 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   ├── App.tsx                # Main App entry and workspace shell
 │   ├── components             # UI component library
 │   │   ├── Header.tsx         # Connection info and global control
+│   │   ├── HomeSettingsModal.tsx # Settings for MIDI mode selection
+│   │   ├── InfoModal.tsx      # Application information and guide
 │   │   ├── KeySplitKeyboard.tsx # Interactive visual keyboard split preview
+│   │   ├── KeySwitchContainer.tsx # Swappable keyswitches/control zone
+│   │   ├── NoteRangeFilterKeyboard.tsx # Note range constraint filter setup
+│   │   ├── PlayStartSettingsModal.tsx # Settings for physical playback split zone
 │   │   ├── ScaleInspectorNotation.tsx # Music notation staff rendering
 │   │   ├── ScaleKeySwitches12.tsx # 12 Key switches selector
-│   │   └── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard
+│   │   ├── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard
+│   │   └── SettingsModal.tsx  # General and developer options
 │   ├── hooks
+│   │   ├── useSynth.ts        # Built-in synthesizer engine
 │   │   └── useWebMidi.ts      # Web MIDI listener & dispatcher
 │   ├── store
 │   │   └── useMidiStore.ts    # Central Zustand store (State blueprint)
@@ -88,6 +97,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   └── midi.ts            # TypeScript interfaces and typings
 │   └── utils
 │       ├── BitmaskCalculator.ts # Bitmask/decimal conversion utils
+│       ├── RoundingEngine.ts  # Key layout rounding calculations
 │       ├── ScaleStepperEngine.ts # Core Stepper & filter calculation
 │       ├── ScaleTransitionEngine.ts # Transition updates
 │       └── lutRegistry.ts     # In-memory database holder

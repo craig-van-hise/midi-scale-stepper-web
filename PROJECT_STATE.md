@@ -1,6 +1,6 @@
 # PROJECT_STATE.md
 
-# Project State: MIDI Scale Stepper MVP
+# Project State: MIDI Scale Stepper
 
 ## 1. Architecture & File Structure
 
@@ -8,12 +8,25 @@ The project directory structure is laid out as follows:
 
 ```
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
+├── # Prompts
+│   ├── # 28.md
+│   ├── # 29.md
+│   ├── # 30.md
+│   ├── # 31.md
+│   ├── # 32.md
+│   ├── WOs
+│   │   └── MIDI-Scale-Stepper-MVP
+│   └── xOlder
 ├── PDD.md
 ├── PRD.md
+├── PROJECT_CONTEXT_BUNDLE.md
+├── PROJECT_STATE.md
 ├── README.md
 ├── index.html
+├── llms.txt
 ├── package-lock.json
 ├── package.json
+├── project_tree.txt
 ├── public
 │   ├── PCS_LUT.dat
 │   └── fonts
@@ -23,6 +36,7 @@ The project directory structure is laid out as follows:
 │   ├── components
 │   │   ├── Header.test.tsx
 │   │   ├── Header.tsx
+│   │   ├── HomeSettingsModal.tsx
 │   │   ├── InfoModal.tsx
 │   │   ├── KeySplitKeyboard.test-helper.ts
 │   │   ├── KeySplitKeyboard.test.tsx
@@ -31,6 +45,9 @@ The project directory structure is laid out as follows:
 │   │   ├── KeySwitchContainer.tsx
 │   │   ├── NoteRangeFilterKeyboard.test.tsx
 │   │   ├── NoteRangeFilterKeyboard.tsx
+│   │   ├── PlayStartSettingsModal.test.tsx
+│   │   ├── PlayStartSettingsModal.tsx
+│   │   ├── ScaleInspectorNotation.test.tsx
 │   │   ├── ScaleInspectorNotation.tsx
 │   │   ├── ScaleKeySwitches12.tsx
 │   │   ├── ScaleStepperKeySwitches25.test.tsx
@@ -38,6 +55,7 @@ The project directory structure is laid out as follows:
 │   │   ├── SettingsModal.tsx
 │   │   └── keyboardMap.ts
 │   ├── hooks
+│   │   ├── useSynth.ts
 │   │   ├── useWebMidi.test.tsx
 │   │   └── useWebMidi.ts
 │   ├── index.css
@@ -76,12 +94,14 @@ The project directory structure is laid out as follows:
 ## 3. Current System Capabilities
 
 ### Functional Modules
-- **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support:
-  - **Scale Select Zone (C3-B3)**: Updates the active scale in the store.
-  - **Stepper Zone (C4-C6)**: Computes dynamic offsets in scale indexes and executes scale steps.
-- **Zustand Store (`useMidiStore.ts`)**: Central state manager containing global settings, active states (rootNote, scaleDecimalId, selectedScaleIndex, activeSwitchIndex, lastPlayedMidi), and interactive keyboard states. All state updates are driven deterministically by event hooks.
-- **Scale Stepper Engine (`ScaleStepperEngine.ts`)**: Resolves step offsets against the selected Pitch Class Set (PCS), transposes the pitch classes, and applies boundary constraints (`octave_wrap` and `smart_wrap`) through `applyOutputFilter`.
-- **LUT Registry (`lutRegistry.ts`, `binaryLut.ts`)**: Decodes the compressed binary lookup table `public/PCS_LUT.dat` into memory at startup to supply active pitch classes.
+- **Audio Engine**: 
+  - **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support: C3-B3 for Scale Selection and C4-C6 for Stepper Zone.
+  - **Built-in Synth Engine (`useSynth.ts`)**: A lightweight, warm Web Audio API triangle oscillator synth mapping the active MIDI output state (`outputActiveKeys`) to real-time audio playback.
+- **Tracking Engine & Zustand Store (`useMidiStore.ts`)**: Global state coordinator handling scale indices, active switches, note history, and boundary constraints. All state changes are event-driven.
+- **Visualizer Modes**:
+  - **Music Notation (`ScaleInspectorNotation.tsx`)**: Renders active scales/notes dynamically on a grand staff layout using the Bravura SMuFL font.
+  - **Keyboard Components (`KeySplitKeyboard.tsx`, `NoteRangeFilterKeyboard.tsx`, etc.)**: Provide interactive visual previews of active scales, keyboard splits, and range constraint filters.
+- **UI State Logic & Settings Modals**: Custom settings modals (`SettingsModal.tsx`, `HomeSettingsModal.tsx`, `PlayStartSettingsModal.tsx`) for user-level MIDI configurations, pitch filters, and options.
 
 ### Current Work-in-Progress / Status
 - **Complete**: All features implemented. Zustand store sync, event routing, physical keyboard mapping, boundary filters, UI controls, and unit tests are complete and passing.

@@ -9,6 +9,17 @@ const MIDDLE_LINE_STEP = 6; // B4
 const NOTE_COLOR = '#FACC15';
 const SELECTED_COLOR = '#a855f7';
 
+export const outputRouting = {
+  triggerOutputNoteOn: (pitch: number, velocity: number = 64) => {
+    useMidiStore.getState().addOutputKey(pitch);
+    // Note: If physical MIDI out is handled globally via a listener on outputActiveKeys,
+    // this is sufficient. Otherwise, ensure hardware dispatch happens here.
+  },
+  triggerOutputNoteOff: (pitch: number) => {
+    useMidiStore.getState().removeOutputKey(pitch);
+  }
+};
+
 /**
  * ScaleInspectorNotation
  * A highly deterministic musical scale visualizer.
@@ -28,7 +39,30 @@ export const ScaleInspectorNotation: React.FC = () => {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
+  // Phase 1: Stable refs for keyboard listener — prevents stale closures
+  const pitchesRef = React.useRef(pitches);
+  const selectedIndicesRef = React.useRef(selectedIndices);
+
+  useEffect(() => { pitchesRef.current = pitches; }, [pitches]);
+  useEffect(() => { selectedIndicesRef.current = selectedIndices; }, [selectedIndices]);
+
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  const timeoutsRef = React.useRef<any[]>([]);
+  const prevLastPlayedMidiRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   // Sync with store active scale
+  // IMPORTANT: pitches is intentionally excluded from deps — use pitchesRef.current for the
+  // comparison instead. Adding pitches here creates a feedback loop with the Phase 3 effect
+  // (pitches → Phase3 pushes store → scaleDecimalId changes → this effect fires → setPitches
+  // → pitches → infinite loop). The ref is always fresh so the guard remains correct.
   useEffect(() => {
     const lut = getLUT();
     if (!lut || !lutReady || scaleDecimalId === null) return;
@@ -41,26 +75,53 @@ export const ScaleInspectorNotation: React.FC = () => {
       return rootMidi + pc;
     }).sort((a: number, b: number) => a - b);
 
-    // Only update if pitches actually differ to avoid loops
-    const matches = pitches.length === newPitches.length && pitches.every((p, i) => p === newPitches[i]);
+    // Use the ref (not state) to break the dep-array feedback loop
+    const current = pitchesRef.current;
+    const matches = current.length === newPitches.length && current.every((p, i) => p === newPitches[i]);
     if (!matches) {
       setPitches(newPitches);
     }
-  }, [scaleDecimalId, rootNote, lutReady, pitches]);
+  }, [scaleDecimalId, rootNote, lutReady]); // pitches excluded intentionally — see comment above
+
+  // Phase 3: Safe Zustand sync — watches local pitches, pushes only when drifted
+  // PRP-31: Route through setActiveState so computeNewLastPlayedMidi engine fires
+  useEffect(() => {
+    if (pitches.length === 0) return;
+    const rootP = pitches[0];
+    const pcs = pitches.map(p => (p - rootP + 12) % 12);
+    const newDecimal = calculateBitmaskDecimal(pcs);
+    const newRootNote = rootP - 60;
+
+    const currentState = useMidiStore.getState().activeState;
+    if (currentState.scaleDecimalId !== newDecimal || currentState.rootNote !== newRootNote) {
+      useMidiStore.getState().setActiveState({
+        scaleDecimalId: newDecimal,
+        rootNote: newRootNote,
+        lastPlayedMidi: currentState.lastPlayedMidi,
+      });
+    }
+  }, [pitches]);
 
   // Highlight last played MIDI note
+  // Phase 3 CRITICAL FIX: Only steal focus if the user has ≤1 note selected
   useEffect(() => {
-    if (lastPlayedMidi === null) {
-      setSelectedIndices(new Set());
-      setLastSelectedIndex(null);
-      return;
-    }
+    if (lastPlayedMidi !== prevLastPlayedMidiRef.current) {
+      prevLastPlayedMidiRef.current = lastPlayedMidi;
+      if (lastPlayedMidi === null) {
+        setSelectedIndices(new Set());
+        setLastSelectedIndex(null);
+        return;
+      }
 
-    const lastPlayedPC = lastPlayedMidi % 12;
-    const idx = pitches.findIndex((p) => p % 12 === lastPlayedPC);
-    if (idx !== -1) {
-      setSelectedIndices(new Set([idx]));
-      setLastSelectedIndex(idx);
+      // Do NOT override a multi-note selection
+      if (selectedIndicesRef.current.size > 1) return;
+
+      const lastPlayedPC = lastPlayedMidi % 12;
+      const idx = pitches.findIndex((p) => p % 12 === lastPlayedPC);
+      if (idx !== -1) {
+        setSelectedIndices(new Set([idx]));
+        setLastSelectedIndex(idx);
+      }
     }
   }, [lastPlayedMidi, pitches]);
 
@@ -105,6 +166,17 @@ export const ScaleInspectorNotation: React.FC = () => {
   // 3. Selection Handlers
   const handleNoteClick = useCallback((index: number, event: React.MouseEvent) => {
     event.stopPropagation();
+
+    if (scaleData?.notes[index]) {
+      const pitch = scaleData.notes[index].pitch;
+      useMidiStore.getState().setLastPlayedMidi(pitch);
+      outputRouting.triggerOutputNoteOn(pitch, 64);
+      const tid = setTimeout(() => {
+        outputRouting.triggerOutputNoteOff(pitch);
+      }, 500);
+      timeoutsRef.current.push(tid);
+    }
+
     const newSelection = new Set(selectedIndices);
 
     if (event.shiftKey && lastSelectedIndex !== null) {
@@ -123,21 +195,19 @@ export const ScaleInspectorNotation: React.FC = () => {
 
     setSelectedIndices(newSelection);
     setLastSelectedIndex(index);
-  }, [selectedIndices, lastSelectedIndex]);
+  }, [selectedIndices, lastSelectedIndex, scaleData]);
 
-  // Mutation Logic
+  // Phase 2: Mutation Logic — functional updaters + refs (no stale closure, zero deps)
   const mutateSelected = useCallback((delta: number) => {
+    let success = false;
+    let nextPitches: number[] = [];
     setPitches(prev => {
-      // 1. Calculate proposed state
-      let proposedPitches = prev.map((p, i) => selectedIndices.has(i) ? p + delta : p);
+      // 1. Calculate proposed state using the ref (always fresh)
+      let proposedPitches = prev.map((p, i) => selectedIndicesRef.current.has(i) ? p + delta : p);
 
-      // 2. Octave Wrap Algorithm
-      // Confine root (index 0) to C4-B4 (60-71)
-      if (proposedPitches[0] > 71) {
-        proposedPitches = proposedPitches.map(p => p - 12);
-      } else if (proposedPitches[0] < 60) {
-        proposedPitches = proposedPitches.map(p => p + 12);
-      }
+      // 2. Octave Wrap Algorithm — confine root (index 0) to C4-B4 (60-71)
+      if (proposedPitches[0] > 71) proposedPitches = proposedPitches.map(p => p - 12);
+      else if (proposedPitches[0] < 60) proposedPitches = proposedPitches.map(p => p + 12);
 
       // 3. Validate: Monotonicity (Strictly Ascending)
       const isMonotonic = proposedPitches.every((p, i, arr) => i === 0 || p > arr[i - 1]);
@@ -148,48 +218,34 @@ export const ScaleInspectorNotation: React.FC = () => {
       const topPitch = proposedPitches[proposedPitches.length - 1];
       if (topPitch - rootPitch > 11) return prev;
 
-      // 5. Validate: Global Bounds (0-127) - Safety check
+      // 5. Validate: Global Bounds (0-127) — safety check
       if (rootPitch < 0 || topPitch > 127) return prev;
 
-      // Sync proposed pitches to Zustand store immediately (zero-normalize to PCS first)
-      const rootP = proposedPitches[0];
-      const pcs = proposedPitches.map(p => (p - rootP + 12) % 12);
-      const newDecimal = calculateBitmaskDecimal(pcs);
-      const newRootNote = rootPitch - 60;
-      useMidiStore.setState((state) => ({
-        activeState: {
-          ...state.activeState,
-          scaleDecimalId: newDecimal,
-          rootNote: newRootNote,
-        },
-      }));
-
+      success = true;
+      nextPitches = proposedPitches;
       return proposedPitches;
     });
-  }, [selectedIndices]);
+
+    if (success && selectedIndicesRef.current.size === 1) {
+      const idx = Array.from(selectedIndicesRef.current)[0];
+      const newPitch = nextPitches[idx];
+      useMidiStore.getState().setLastPlayedMidi(newPitch);
+      setSelectedIndices(new Set([idx]));
+    }
+  }, []); // No deps — reads state via refs inside the functional updater
 
   const deleteSelected = useCallback(() => {
-    if (pitches.length <= 2) return;
-    const next = pitches.filter((_, i) => !selectedIndices.has(i));
+    // Read current state imperatively from refs — never call setState inside a setState updater
+    // (that triggers "setState during render" crash in React strict mode).
+    const prev = pitchesRef.current;
+    if (prev.length <= 2) return;
+    const next = prev.filter((_, i) => !selectedIndicesRef.current.has(i));
     if (next.length >= 2) {
-        setPitches(next);
-        setSelectedIndices(new Set());
-        setLastSelectedIndex(null);
-
-        // Sync to Zustand store immediately (zero-normalize to PCS first)
-        const rootP = next[0];
-        const pcs = next.map(p => (p - rootP + 12) % 12);
-        const newDecimal = calculateBitmaskDecimal(pcs);
-        const newRootNote = next[0] - 60;
-        useMidiStore.setState((state) => ({
-          activeState: {
-            ...state.activeState,
-            scaleDecimalId: newDecimal,
-            rootNote: newRootNote,
-          },
-        }));
+      setPitches(next);
+      setSelectedIndices(new Set());
+      setLastSelectedIndex(null);
     }
-  }, [pitches, selectedIndices]);
+  }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedIndices(new Set());
@@ -197,6 +253,67 @@ export const ScaleInspectorNotation: React.FC = () => {
   }, []);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-testid="notehead"]')) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setDragStart({ x, y });
+    setDragCurrent({ x, y });
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragStart) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setDragCurrent({ x, y });
+
+    if (containerRef.current) {
+      const left = Math.min(dragStart.x, x);
+      const right = Math.max(dragStart.x, x);
+      const top = Math.min(dragStart.y, y);
+      const bottom = Math.max(dragStart.y, y);
+
+      const noteElements = Array.from(containerRef.current.querySelectorAll('[data-pitch-index]'));
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const dragLeft = containerRect.left + left;
+      const dragRight = containerRect.left + right;
+      const dragTop = containerRect.top + top;
+      const dragBottom = containerRect.top + bottom;
+
+      const newSelected = new Set<number>();
+      noteElements.forEach((el) => {
+        const idxAttr = el.getAttribute('data-pitch-index');
+        if (idxAttr === null) return;
+        const idx = parseInt(idxAttr, 10);
+
+        const notehead = el.querySelector('[data-testid="notehead"]');
+        if (notehead) {
+          const r = notehead.getBoundingClientRect();
+          const intersects = !(r.right < dragLeft || 
+                               r.left > dragRight || 
+                               r.bottom < dragTop || 
+                               r.top > dragBottom);
+          if (intersects) {
+            newSelected.add(idx);
+          }
+        }
+      });
+
+      setSelectedIndices(newSelected);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDragStart(null);
+    setDragCurrent(null);
+  };
 
   const insertNoteMidway = useCallback((event: React.MouseEvent) => {
     if (pitches.length >= 12 || !containerRef.current) return;
@@ -240,44 +357,40 @@ export const ScaleInspectorNotation: React.FC = () => {
                 setSelectedIndices(new Set([rightIdx]));
                 setLastSelectedIndex(rightIdx);
 
-                // Sync to Zustand store immediately (zero-normalize to PCS first)
+                // PRP-31: Route through setActiveState so computeNewLastPlayedMidi engine fires
                 const rootP = proposedPitches[0];
                 const pcs = proposedPitches.map(p => (p - rootP + 12) % 12);
                 const newDecimal = calculateBitmaskDecimal(pcs);
                 const newRootNote = rootPitch - 60;
-                useMidiStore.setState((state) => ({
-                  activeState: {
-                    ...state.activeState,
-                    scaleDecimalId: newDecimal,
-                    rootNote: newRootNote,
-                  },
-                }));
+                useMidiStore.getState().setActiveState({
+                  scaleDecimalId: newDecimal,
+                  rootNote: newRootNote,
+                });
             }
         }
     }
   }, [pitches]);
 
   // 5. Global Keyboard Listener
+  // Phase 2: Empty dep array — reads selectedIndicesRef / pitchesRef to avoid stale closures
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedIndices.size === 0) return;
+      if (selectedIndicesRef.current.size === 0) return;
 
-      if (e.key === 'ArrowUp') {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
-        mutateSelected(1);
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        mutateSelected(-1);
+        e.stopPropagation();
+        mutateSelected(e.key === 'ArrowUp' ? 1 : -1);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        const minIdx = Math.min(...Array.from(selectedIndices));
+        const minIdx = Math.min(...Array.from(selectedIndicesRef.current));
         const next = Math.max(0, minIdx - 1);
         setSelectedIndices(new Set([next]));
         setLastSelectedIndex(next);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        const maxIdx = Math.max(...Array.from(selectedIndices));
-        const next = Math.min(pitches.length - 1, maxIdx + 1);
+        const maxIdx = Math.max(...Array.from(selectedIndicesRef.current));
+        const next = Math.min(pitchesRef.current.length - 1, maxIdx + 1);
         setSelectedIndices(new Set([next]));
         setLastSelectedIndex(next);
       } else if (e.key === 'Escape') {
@@ -291,7 +404,7 @@ export const ScaleInspectorNotation: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIndices, mutateSelected, deleteSelected]);
+  }, []); // Intentionally empty — all state is accessed via stable refs
 
   const lines = [2, 1, 0, -1, -2]; 
 
@@ -370,7 +483,30 @@ export const ScaleInspectorNotation: React.FC = () => {
         {scaleData?.rootName} {scaleData?.entry?.scale_type || 'Unknown Scale'}
       </div>
 
-      <div style={canvasStyle}>
+      <div 
+        style={canvasStyle}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* Drag Selection Box */}
+        {dragStart && dragCurrent && (
+          <div 
+            style={{
+              position: 'absolute',
+              left: Math.min(dragStart.x, dragCurrent.x),
+              top: Math.min(dragStart.y, dragCurrent.y),
+              width: Math.abs(dragStart.x - dragCurrent.x),
+              height: Math.abs(dragStart.y - dragCurrent.y),
+              border: '1.5px dashed #a855f7',
+              backgroundColor: 'rgba(168, 85, 247, 0.15)',
+              pointerEvents: 'none',
+              zIndex: 1000,
+            }}
+          />
+        )}
+
         {/* Staff Wrapper with Barlines */}
         <div style={staffWrapperStyle}>
           {lines.map((multiplier, i) => (

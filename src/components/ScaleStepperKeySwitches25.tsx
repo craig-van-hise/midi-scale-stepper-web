@@ -1,40 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useMidiStore } from '../store/useMidiStore';
 import { executeScaleStep } from '../utils/ScaleStepperEngine';
+import { calculateDynamicStepOffset } from '../utils/RoundingEngine';
 
 export interface StepperData {
-  note: string;
-  index: string;
-  interval: string;
+  noteName: string;
   isBlack: boolean;
 }
 
 export const STEPPER_DATA_MAP: StepperData[] = [
-  { note: 'C4', index: '-7', interval: '-P8', isBlack: false },
-  { note: 'Db4', index: '-6', interval: '-m7', isBlack: true },
-  { note: 'D4', index: '-6', interval: '-m7', isBlack: false },
-  { note: 'Eb4', index: '-5', interval: '-m6', isBlack: true },
-  { note: 'E4', index: '-5', interval: '-m6', isBlack: false },
-  { note: 'F4', index: '-4', interval: '-P5', isBlack: false },
-  { note: 'Gb4', index: '-3', interval: '-P4', isBlack: true },
-  { note: 'G4', index: '-3', interval: '-P4', isBlack: false },
-  { note: 'Ab4', index: '-2', interval: '-m3', isBlack: true },
-  { note: 'A4', index: '-2', interval: '-m3', isBlack: false },
-  { note: 'Bb4', index: '-1', interval: '-m2', isBlack: true },
-  { note: 'B4', index: '-1', interval: '-m2', isBlack: false },
-  { note: 'C5', index: '0', interval: 'Unison', isBlack: false },
-  { note: 'Db5', index: '+1', interval: '+M2', isBlack: true },
-  { note: 'D5', index: '+1', interval: '+M2', isBlack: false },
-  { note: 'Eb5', index: '+2', interval: '+M3', isBlack: true },
-  { note: 'E5', index: '+2', interval: '+M3', isBlack: false },
-  { note: 'F5', index: '+3', interval: '+P4', isBlack: false },
-  { note: 'Gb5', index: '+4', interval: '+P5', isBlack: true },
-  { note: 'G5', index: '+4', interval: '+P5', isBlack: false },
-  { note: 'Ab5', index: '+5', interval: '+M6', isBlack: true },
-  { note: 'A5', index: '+5', interval: '+M6', isBlack: false },
-  { note: 'Bb5', index: '+6', interval: '+M7', isBlack: true },
-  { note: 'B5', index: '+6', interval: '+M7', isBlack: false },
-  { note: 'C6', index: '+7', interval: '+P8', isBlack: false }
+  { noteName: 'C3', isBlack: false },
+  { noteName: 'Db3', isBlack: true },
+  { noteName: 'D3', isBlack: false },
+  { noteName: 'Eb3', isBlack: true },
+  { noteName: 'E3', isBlack: false },
+  { noteName: 'F3', isBlack: false },
+  { noteName: 'Gb3', isBlack: true },
+  { noteName: 'G3', isBlack: false },
+  { noteName: 'Ab3', isBlack: true },
+  { noteName: 'A3', isBlack: false },
+  { noteName: 'Bb3', isBlack: true },
+  { noteName: 'B3', isBlack: false },
+  { noteName: 'C4', isBlack: false },
+  { noteName: 'Db4', isBlack: true },
+  { noteName: 'D4', isBlack: false },
+  { noteName: 'Eb4', isBlack: true },
+  { noteName: 'E4', isBlack: false },
+  { noteName: 'F4', isBlack: false },
+  { noteName: 'Gb4', isBlack: true },
+  { noteName: 'G4', isBlack: false },
+  { noteName: 'Ab4', isBlack: true },
+  { noteName: 'A4', isBlack: false },
+  { noteName: 'Bb4', isBlack: true },
+  { noteName: 'B4', isBlack: false },
+  { noteName: 'C5', isBlack: false }
 ];
 
 const containerStyle: React.CSSProperties = { 
@@ -93,25 +93,43 @@ const getBlackStyle = (isSelected: boolean): React.CSSProperties => ({
   color: '#fff'
 });
 
-
-const ScaleStepperKeySwitches25: React.FC = () => {
-  const [selectedIndex, setSelectedIndex] = useState<number>(12); // C5 default
+export const ScaleStepperKeySwitches25: React.FC = () => {
+  const [selectedIndex, setSelectedIndex] = useState<number>(12); // C4 default
   const activeKeys = useMidiStore((state) => state.uiState.activeKeys);
+  const scaleDecimalId = useMidiStore((state) => state.activeState.scaleDecimalId);
+  const roundPreference = useMidiStore((state) => state.globalSettings.roundPreference);
+  const activeStepperNotes = useRef<Record<number, number>>({});
 
-  // When a MIDI note in the stepper zone (60-84) is pressed, highlight that key
+  // When a MIDI note in the stepper zone (48-72) is pressed, highlight that key
   useEffect(() => {
-    const stepperKeys = activeKeys.filter(k => k >= 60 && k <= 84);
+    const stepperKeys = activeKeys.filter(k => k >= 48 && k <= 72);
     if (stepperKeys.length > 0) {
       // Use the most recently added (last in array) stepper key
       const lastKey = stepperKeys[stepperKeys.length - 1];
-      setSelectedIndex(lastKey - 60); // MIDI 60 → index 0, MIDI 72 → index 12
+      setSelectedIndex(lastKey - 48); // MIDI 48 → index 0, MIDI 72 → index 24
     }
   }, [activeKeys]);
 
-  const activeKey = STEPPER_DATA_MAP[selectedIndex];
+  const activeKeyName = STEPPER_DATA_MAP[selectedIndex].noteName;
+  const activeOffset = calculateDynamicStepOffset(48 + selectedIndex, scaleDecimalId, roundPreference);
+  const activeOffsetLabel = activeOffset > 0 ? `+${activeOffset}` : `${activeOffset}`;
 
-  const triggerStep = (stepOffset: number) => {
-    executeScaleStep(stepOffset);
+  const triggerStepOn = (i: number, offset: number) => {
+    setSelectedIndex(i);
+    const finalMidi = executeScaleStep(offset);
+    if (finalMidi !== null) {
+      activeStepperNotes.current[i] = finalMidi;
+    }
+    useMidiStore.getState().addActiveKey(48 + i);
+  };
+
+  const triggerStepOff = (i: number) => {
+    const targetNote = activeStepperNotes.current[i];
+    if (targetNote !== undefined) {
+      useMidiStore.getState().removeOutputKey(targetNote);
+      delete activeStepperNotes.current[i];
+    }
+    useMidiStore.getState().removeActiveKey(48 + i);
   };
 
   return (
@@ -143,7 +161,7 @@ const ScaleStepperKeySwitches25: React.FC = () => {
           zIndex: 300
         }}
       >
-        {activeKey.note} | {activeKey.index}
+        {activeOffsetLabel}
       </div>
 
       {/* Keyboard Layout Container */}
@@ -169,31 +187,48 @@ const ScaleStepperKeySwitches25: React.FC = () => {
           const nextItem = STEPPER_DATA_MAP[i + 1];
           const hasNestedBlack = nextItem && nextItem.isBlack;
 
+          const offset = calculateDynamicStepOffset(48 + i, scaleDecimalId, roundPreference);
+          const offsetLabel = offset > 0 ? `+${offset}` : `${offset}`;
+
+          let nextOffsetLabel = '';
+          let nextOffset = 0;
+          if (hasNestedBlack) {
+            nextOffset = calculateDynamicStepOffset(48 + i + 1, scaleDecimalId, roundPreference);
+            nextOffsetLabel = nextOffset > 0 ? `+${nextOffset}` : `${nextOffset}`;
+          }
+
           return (
             <div
               key={i}
               data-key-type="white"
               data-key-index={i}
               style={getWhiteStyle(isSelected)}
-              onClick={() => {
-                setSelectedIndex(i);
-                triggerStep(parseInt(item.index, 10));
+              onPointerDown={(e) => {
+                e.preventDefault();
+                triggerStepOn(i, offset);
               }}
+              onPointerUp={() => triggerStepOff(i)}
+              onPointerLeave={() => triggerStepOff(i)}
             >
-              <span style={{ fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none' }}>{item.index}</span>
+              <span style={{ fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none' }}>{offsetLabel}</span>
 
               {hasNestedBlack && (
                 <div
                   data-key-type="black"
                   data-key-index={i + 1}
                   style={getBlackStyle(selectedIndex === (i + 1))}
-                  onClick={(e) => {
+                  onPointerDown={(e) => {
                     e.stopPropagation();
-                    setSelectedIndex(i + 1);
-                    triggerStep(parseInt(nextItem.index, 10));
+                    e.preventDefault();
+                    triggerStepOn(i + 1, nextOffset);
                   }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    triggerStepOff(i + 1);
+                  }}
+                  onPointerLeave={() => triggerStepOff(i + 1)}
                 >
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none', color: '#fff' }}>{nextItem.index}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none', color: '#fff' }}>{nextOffsetLabel}</span>
                 </div>
               )}
             </div>

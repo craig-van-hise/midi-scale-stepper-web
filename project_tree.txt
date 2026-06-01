@@ -1,0 +1,128 @@
+
+/Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
+├── # Prompts
+|  ├── # 28.md
+|  ├── # 29.md
+|  ├── # 30.md
+|  ├── # 31.md
+|  ├── # 32.md
+|  ├── WOs
+|  |  └── MIDI-Scale-Stepper-MVP
+|  |     ├── Phase_1
+|  |     |  ├── 1-12_frontend-state.md
+|  |     |  └── 1-1_workspace-setup.md
+|  |     ├── Phase_2
+|  |     |  ├── 2-10_test-engineer.md
+|  |     |  └── 2-7_core-algorithm.md
+|  |     ├── Phase_3
+|  |     |  ├── 3-13_ui-coder.md
+|  |     |  └── 3-14_styling-specialist.md
+|  |     ├── Phase_4
+|  |     |  └── 4-13_ui-coder.md
+|  |     ├── Phase_5
+|  |     |  └── 5-13_ui-coder.md
+|  |     ├── Phase_6
+|  |     |  ├── 6-13_ui-coder.md
+|  |     |  └── 6-14_styling-specialist.md
+|  |     └── _scorecard.md
+|  └── xOlder
+|     ├── # 0.md
+|     ├── # 1.md
+|     ├── # 10.md
+|     ├── # 11.md
+|     ├── # 12.md
+|     ├── # 13.md
+|     ├── # 14.md
+|     ├── # 15.md
+|     ├── # 16.md
+|     ├── # 17.md
+|     ├── # 18.md
+|     ├── # 19.md
+|     ├── # 2.md
+|     ├── # 20.md
+|     ├── # 21.md
+|     ├── # 22.md
+|     ├── # 23.md
+|     ├── # 24.md
+|     ├── # 25.md
+|     ├── # 26.md
+|     ├── # 27.md
+|     ├── # 3.md
+|     ├── # 4.md
+|     ├── # 5.md
+|     ├── # 6.md
+|     ├── # 7.md
+|     ├── # 8.md
+|     └── # 9.md
+├── PDD.md
+├── PRD.md
+├── PROJECT_CONTEXT_BUNDLE.md
+├── PROJECT_STATE.md
+├── README.md
+├── index.html
+├── llms.txt
+├── package-lock.json
+├── package.json
+├── project_tree.txt
+├── public
+|  ├── PCS_LUT.dat
+|  └── fonts
+|     └── Bravura.woff2
+├── src
+|  ├── App.tsx
+|  ├── components
+|  |  ├── Header.test.tsx
+|  |  ├── Header.tsx
+|  |  ├── HomeSettingsModal.tsx
+|  |  ├── InfoModal.tsx
+|  |  ├── KeySplitKeyboard.test-helper.ts
+|  |  ├── KeySplitKeyboard.test.tsx
+|  |  ├── KeySplitKeyboard.tsx
+|  |  ├── KeySwitchContainer.test.tsx
+|  |  ├── KeySwitchContainer.tsx
+|  |  ├── NoteRangeFilterKeyboard.test.tsx
+|  |  ├── NoteRangeFilterKeyboard.tsx
+|  |  ├── PlayStartSettingsModal.test.tsx
+|  |  ├── PlayStartSettingsModal.tsx
+|  |  ├── ScaleInspectorNotation.test.tsx
+|  |  ├── ScaleInspectorNotation.tsx
+|  |  ├── ScaleKeySwitches12.tsx
+|  |  ├── ScaleStepperKeySwitches25.test.tsx
+|  |  ├── ScaleStepperKeySwitches25.tsx
+|  |  ├── SettingsModal.tsx
+|  |  └── keyboardMap.ts
+|  ├── hooks
+|  |  ├── useSynth.ts
+|  |  ├── useWebMidi.test.tsx
+|  |  └── useWebMidi.ts
+|  ├── index.css
+|  ├── main.tsx
+|  ├── store
+|  |  ├── useMidiStore.test.ts
+|  |  └── useMidiStore.ts
+|  ├── test
+|  |  └── setup.ts
+|  ├── types
+|  |  └── midi.ts
+|  └── utils
+|     ├── BitmaskCalculator.test.ts
+|     ├── BitmaskCalculator.ts
+|     ├── RoundingEngine.test.ts
+|     ├── RoundingEngine.ts
+|     ├── ScaleStepperEngine.test.ts
+|     ├── ScaleStepperEngine.ts
+|     ├── ScaleTransitionEngine.test.ts
+|     ├── ScaleTransitionEngine.ts
+|     ├── binaryLut.ts
+|     ├── lutRegistry.ts
+|     ├── notationMath.ts
+|     └── scaleSpeller.ts
+├── tsconfig.json
+└── vite.config.ts
+
+directory: 463 file: 3561
+
+ignored: directory (69)
+
+
+[2K[1G
