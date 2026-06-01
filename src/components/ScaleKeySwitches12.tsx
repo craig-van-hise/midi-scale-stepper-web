@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
 import { Settings } from 'lucide-react';
@@ -132,6 +133,8 @@ const ScaleKeySwitches12: React.FC = () => {
   const [isRootMenuOpen, setIsRootMenuOpen] = useState<boolean>(false);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [rootMenuCoords, setRootMenuCoords] = useState({ top: 0, left: 0 });
+  const [typeMenuCoords, setTypeMenuCoords] = useState({ top: 0, left: 0 });
 
   const rootMenuRef = useRef<HTMLDivElement>(null);
   
@@ -226,62 +229,30 @@ const ScaleKeySwitches12: React.FC = () => {
           data-testid="top-strip-root"
           className="cursor-pointer hover:opacity-75 text-orange-500 px-1"
           style={{ position: 'relative' }}
-          onClick={() => {
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            // Anchor to bottom center of the trigger
+            setRootMenuCoords({ 
+              top: rect.bottom + window.scrollY + 8, 
+              left: rect.left + window.scrollX + (rect.width / 2) 
+            });
             setIsRootMenuOpen(!isRootMenuOpen);
             setIsTypeMenuOpen(false);
           }}
         >
           {activeScale.root}
-
-          {/* Mock Dropdown for Root */}
-          {isRootMenuOpen && (
-            <div 
-              ref={rootMenuRef}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                marginTop: '8px',
-                width: '120px',
-                maxHeight: '300px',
-                overflowY: 'auto',
-                backgroundColor: '#222',
-                border: '1px solid #444',
-                borderRadius: '4px',
-                zIndex: 1000,
-                boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
-                fontFamily: "'Roboto Mono', monospace"
-              }}
-            >
-              {CYCLE_OF_FIFTHS.map(root => {
-                const isCurrentSelection = root === activeScale.root;
-                return (
-                  <div
-                    key={root}
-                    data-testid={`root-option-${root}`}
-                    className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-blue-600 hover:text-white ${isCurrentSelection ? 'font-bold text-white' : 'text-white'}`}
-                    style={{
-                      backgroundColor: isCurrentSelection ? '#444' : undefined
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRootSelect(root);
-                    }}
-                  >
-                    {root}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </span>
         <span className="mx-1.5 font-normal text-gray-400">|</span>
         <span 
           data-testid="top-strip-type"
           className="cursor-pointer hover:opacity-75 text-black px-1"
-          onClick={() => {
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            // Anchor to bottom right of the trigger
+            setTypeMenuCoords({ 
+              top: rect.bottom + window.scrollY + 8, 
+              left: rect.right + window.scrollX 
+            });
             setIsTypeMenuOpen(!isTypeMenuOpen);
             setIsRootMenuOpen(false);
           }}
@@ -298,37 +269,6 @@ const ScaleKeySwitches12: React.FC = () => {
         >
           <Settings className="w-4 h-4" />
         </button>
-
-        {/* Mock Dropdown for Type */}
-        {isTypeMenuOpen && (
-          <div 
-            style={{
-              position: 'absolute',
-              top: '38px',
-              right: '50px',
-              width: '160px',
-              maxHeight: '200px',
-              overflowY: 'auto',
-              backgroundColor: '#222',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              zIndex: 100,
-              boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
-              fontFamily: "'Roboto Mono', monospace"
-            }}
-          >
-            {TYPE_OPTIONS.map(type => (
-              <div
-                key={type}
-                data-testid={`type-option-${type}`}
-                className="px-3 py-1.5 text-sm text-white cursor-pointer hover:bg-emerald-600 hover:text-white"
-                onClick={() => handleTypeSelect(type)}
-              >
-                {type}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Keyboard Layout */}
@@ -408,6 +348,82 @@ const ScaleKeySwitches12: React.FC = () => {
         />
       </div>
       <ScaleChangeSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      {isRootMenuOpen && createPortal(
+        <div 
+          ref={rootMenuRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: `${rootMenuCoords.top}px`,
+            left: `${rootMenuCoords.left}px`,
+            transform: 'translateX(-50%)',
+            width: '120px',
+            maxHeight: '300px',
+            overflowY: 'auto',
+            backgroundColor: '#222',
+            border: '1px solid #444',
+            borderRadius: '4px',
+            zIndex: 9999, // Ensure it sits above everything
+            boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+            fontFamily: "'Roboto Mono', monospace"
+          }}
+        >
+          {CYCLE_OF_FIFTHS.map(root => {
+            const isCurrentSelection = root === activeScale.root;
+            return (
+              <div
+                key={root}
+                data-testid={`root-option-${root}`}
+                className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-blue-600 hover:text-white ${isCurrentSelection ? 'font-bold text-white' : 'text-white'}`}
+                style={{
+                  backgroundColor: isCurrentSelection ? '#444' : undefined
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRootSelect(root);
+                }}
+              >
+                {root}
+              </div>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+
+      {isTypeMenuOpen && createPortal(
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: `${typeMenuCoords.top}px`,
+            left: `${typeMenuCoords.left}px`,
+            transform: 'translateX(-100%)', // align right edge
+            width: '160px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            backgroundColor: '#222',
+            border: '1px solid #444',
+            borderRadius: '4px',
+            zIndex: 9999,
+            boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+            fontFamily: "'Roboto Mono', monospace"
+          }}
+        >
+          {TYPE_OPTIONS.map(type => (
+            <div
+              key={type}
+              data-testid={`type-option-${type}`}
+              className="px-3 py-1.5 text-sm text-white cursor-pointer hover:bg-emerald-600 hover:text-white"
+              onClick={() => handleTypeSelect(type)}
+            >
+              {type}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

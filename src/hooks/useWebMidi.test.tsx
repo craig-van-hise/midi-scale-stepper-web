@@ -981,7 +981,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
     } as any);
 
     // C6 (84) smart_wrap in [36, 83] should wrap down to C2 (36)
-    expect(setLastPlayedMidiSpy).toHaveBeenCalledWith(36);
+    expect(setLastPlayedMidiSpy).toHaveBeenCalledWith(84);
     expect(addOutputKeySpy).toHaveBeenCalledWith(36);
     expect(useMidiStore.getState().uiState.activeKeys).toContain(84); // Physical key
     expect(useMidiStore.getState().uiState.activeKeys).not.toContain(36); // Target key
@@ -1052,7 +1052,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
       data: new Uint8Array([0x90, 84, 100])
     } as any);
 
-    expect(setLastPlayedMidiSpy).not.toHaveBeenCalled();
+    expect(setLastPlayedMidiSpy).toHaveBeenCalledWith(84);
     expect(addOutputKeySpy).not.toHaveBeenCalled();
     expect(useMidiStore.getState().uiState.activeKeys).toContain(84); // Physical key is still highlighted
     expect(useMidiStore.getState().uiState.activeKeys).not.toContain(72); // Wrapped key is NOT active since it was dropped
@@ -1292,5 +1292,75 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
     expect(removeOutputKeySpy).toHaveBeenCalledWith(62);
 
     executeScaleStepSpy.mockRestore();
+  });
+
+  it('Phase 2 Checkpoint: Test Case 1 - Given an Output Filter range of C4-C5, When a Play/Start note of C2 is triggered, Assert setLastPlayedMidi updates to C2, even though addOutputKey is NOT called', async () => {
+    const mockInput = {
+      id: 'mock-input-1',
+      name: 'Mock MIDI Input',
+      onmidimessage: null as any,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    
+    mockRequestMIDIAccess.mockResolvedValue({
+      inputs: {
+        values: () => [mockInput][Symbol.iterator](),
+        get: (_id: string) => mockInput,
+        size: 1,
+      },
+      outputs: {
+        values: () => [][Symbol.iterator](),
+        size: 0,
+      },
+      onstatechange: null,
+    });
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: 'mock-input-1',
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'drop', // drop mode so it gets dropped
+        filterRange: [60, 72], // C4-C5
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+      },
+      playStartSettings: {
+        audible: true,
+        rounded: false,
+        octaveOffset: -4, // so note 84 (C6) + (-4 * 12) = 36 (C2)
+      },
+      uiState: {
+        activeKeys: [],
+        outputActiveKeys: [],
+      }
+    });
+
+    const addOutputKeySpy = vi.spyOn(useMidiStore.getState(), 'addOutputKey');
+    const setLastPlayedMidiSpy = vi.spyOn(useMidiStore.getState(), 'setLastPlayedMidi');
+
+    renderHook(() => useWebMidi());
+
+    await vi.waitFor(() => {
+      expect(mockInput.onmidimessage).toBeTypeOf('function');
+    });
+
+    // Send Note On for 84 (C6), maps to target note 36 (C2)
+    mockInput.onmidimessage({
+      data: new Uint8Array([0x90, 84, 100])
+    } as any);
+
+    expect(setLastPlayedMidiSpy).toHaveBeenCalledWith(36);
+    expect(useMidiStore.getState().activeState.lastPlayedMidi).toBe(36);
+    expect(addOutputKeySpy).not.toHaveBeenCalled();
   });
 });

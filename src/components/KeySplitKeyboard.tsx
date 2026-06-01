@@ -138,7 +138,7 @@ export default function KeySplitKeyboard() {
         activeKeys.includes(n) ||
         (rootNote !== null && n === 24 + (rootNote % 12)) ||
         (n === 36 + activeSwitchIndex) ||
-        (lastPlayedMidi !== null && n === lastPlayedMidi && n >= 73 && n <= 108);
+        (lastPlayedMidi !== null && n === lastPlayedMidi - ((playStartSettings.octaveOffset ?? 0) * 12) && n >= 73 && n <= 108);
 
       if (isKeyActive) {
         const color = zone ? zone.color : '#64748b';
@@ -236,15 +236,16 @@ export default function KeySplitKeyboard() {
       );
       const targetNote = rounded ? roundedNote : rawNote;
       
+      // 1. ALWAYS set anchor and registry FIRST
+      state.setLastPlayedMidi(targetNote);
+      activeNotesRegistry.current.set(note, targetNote);
+      
+      // 2. Apply Output Filter
       const finalTargetNote = applyOutputFilter(targetNote, filterMode, filterRange[0], filterRange[1]);
       
-      if (finalTargetNote !== null) {
-        state.setLastPlayedMidi(finalTargetNote);
-        activeNotesRegistry.current.set(note, finalTargetNote);
-        
-        if (audible) {
-          state.addOutputKey(finalTargetNote);
-        }
+      // 3. Route to Output
+      if (finalTargetNote !== null && audible) {
+        state.addOutputKey(finalTargetNote);
       }
       
       state.addActiveKey(note);

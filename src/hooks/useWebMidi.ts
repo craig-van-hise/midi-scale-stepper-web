@@ -175,15 +175,16 @@ export function useWebMidi() {
           );
           const targetNote = rounded ? roundedNote : rawNote;
           
+          // 1. ALWAYS set anchor and registry FIRST
+          state.setLastPlayedMidi(targetNote);
+          activeNotesRegistry.current.set(note, targetNote);
+          
+          // 2. Apply Output Filter
           const finalTargetNote = applyOutputFilter(targetNote, filterMode, filterRange[0], filterRange[1]);
           
-          if (finalTargetNote !== null) {
-            state.setLastPlayedMidi(finalTargetNote);
-            activeNotesRegistry.current.set(note, finalTargetNote);
-            
-            if (audible) {
-              state.addOutputKey(finalTargetNote);
-            }
+          // 3. Route to Output
+          if (finalTargetNote !== null && audible) {
+            state.addOutputKey(finalTargetNote);
           }
           
           // Always highlight the actual physical key pressed on the input UI

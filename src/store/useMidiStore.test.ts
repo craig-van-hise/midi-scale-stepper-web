@@ -117,10 +117,15 @@ describe('useMidiStore', () => {
 
   it('should update playStartSettings defaults correctly', () => {
     const store = useMidiStore.getState();
-    expect(store.playStartSettings).toEqual({ audible: true, rounded: false, octaveOffset: 0 });
+    expect(store.playStartSettings).toEqual({ audible: true, rounded: false, octaveOffset: -2 });
     
     store.updatePlayStartSettings({ rounded: true });
-    expect(useMidiStore.getState().playStartSettings).toEqual({ audible: true, rounded: true, octaveOffset: 0 });
+    expect(useMidiStore.getState().playStartSettings).toEqual({ audible: true, rounded: true, octaveOffset: -2 });
+  });
+
+  it('Phase 1 - Store Default Update - Test Case 1: Given store initialization, Assert playStartSettings.octaveOffset equals -2', () => {
+    const store = useMidiStore.getState();
+    expect(store.playStartSettings.octaveOffset).toBe(-2);
   });
 
   it('should calculate and update lastPlayedMidi on triggerHomeReset - Test Case 1 (C4)', () => {

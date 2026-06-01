@@ -102,7 +102,7 @@ export const useMidiStore = create<MidiStore>((set) => ({
   playStartSettings: {
     audible: true,
     rounded: false,
-    octaveOffset: 0,
+    octaveOffset: -2,
   },
   homeSettings: {
     audible: true,
