@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
 import { STANDARD_PITCH_CLASSES, NOTE_TO_PC } from '../components/ScaleKeySwitches12';
-import { STEPPER_DATA_MAP } from '../components/ScaleStepperKeySwitches25';
 import { executeScaleStep, applyOutputFilter } from '../utils/ScaleStepperEngine';
 import { roundNote, calculateDynamicStepOffset } from '../utils/RoundingEngine';
 
@@ -147,17 +146,10 @@ export function useWebMidi() {
           return;
         }
 
-        // 4. Stepper Zone: 48 - 72 (C3 - C5)
-        if (note >= 48 && note <= 72) {
-          const state = useMidiStore.getState();
-          const scaleBitmask = state.activeState.scaleDecimalId;
-          const roundingPreference = state.globalSettings.roundPreference;
-          const stepOffset = calculateDynamicStepOffset(note, scaleBitmask, roundingPreference);
-          const finalMidi = executeScaleStep(stepOffset);
-          if (finalMidi !== null) {
-            activeNotesRegistry.current.set(note, finalMidi);
-          }
-          state.addActiveKey(note);
+        // 4. Stepper Zone: 48 - 71 (C3 - B4)
+        if (note >= 48 && note <= 71) {
+          const index = note - 48;
+          useMidiStore.getState().processStepperAction(index, true, executeScaleStep);
           return;
         }
 
@@ -222,23 +214,9 @@ export function useWebMidi() {
         if (note >= 36 && note <= 47) {
           return;
         }
-        if (note >= 48 && note <= 72) {
-          const freshState = useMidiStore.getState();
-          freshState.removeActiveKey(note);
-          const targetNote = activeNotesRegistry.current.get(note);
-          if (targetNote !== undefined) {
-            let isHeldByAnother = false;
-            activeNotesRegistry.current.forEach((val, key) => {
-              if (key !== note && val === targetNote) {
-                isHeldByAnother = true;
-              }
-            });
-
-            if (!isHeldByAnother) {
-              freshState.removeOutputKey(targetNote);
-            }
-            activeNotesRegistry.current.delete(note);
-          }
+        if (note >= 48 && note <= 71) {
+          const index = note - 48;
+          useMidiStore.getState().processStepperAction(index, false);
           return;
         }
         if (note >= 73 && note <= 108) {

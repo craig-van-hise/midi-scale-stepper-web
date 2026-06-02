@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import React from 'react';
 import KeySwitchContainer from './KeySwitchContainer';
 
 vi.mock('./ScaleKeySwitches12', () => ({
@@ -8,7 +7,7 @@ vi.mock('./ScaleKeySwitches12', () => ({
 }));
 
 describe('KeySwitchContainer & Stepper Labels', () => {
-  it('renders both ScaleKeySwitches12 and ScaleStepperKeySwitches25 within the shared wrapper', () => {
+  it('renders both ScaleKeySwitches12 and ScaleStepperKeySwitches24 within the shared wrapper', () => {
     const { container } = render(<KeySwitchContainer />);
     
     // Check wrapper container
@@ -19,12 +18,12 @@ describe('KeySwitchContainer & Stepper Labels', () => {
     const scaleSelect = container.querySelector('[data-scales-count="12"]');
     expect(scaleSelect).not.toBeNull();
 
-    // Check ScaleStepperKeySwitches25 presence (has data-keys-count="25")
-    const stepper = container.querySelector('[data-keys-count="25"]');
+    // Check ScaleStepperKeySwitches24 presence (has data-keys-count="24")
+    const stepper = container.querySelector('[data-keys-count="24"]');
     expect(stepper).not.toBeNull();
   });
 
-  it('asserts that dynamic interval text nodes are no longer present in ScaleStepperKeySwitches25', () => {
+  it('asserts that dynamic interval text nodes are no longer present in ScaleStepperKeySwitches24', () => {
     const { queryByText } = render(<KeySwitchContainer />);
 
     // These were the interval labels in STEPPER_DATA_MAP:

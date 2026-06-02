@@ -1,7 +1,34 @@
 import { create } from 'zustand';
-import type { MidiStore, ScaleSwitchData } from '../types/midi';
+import type { MidiStore, ScaleSwitchData, StepperAction } from '../types/midi';
 import { roundToScale } from '../utils/RoundingEngine';
 import { getLUT } from '../utils/lutRegistry';
+
+const DEFAULT_STEPPER_CONFIG: StepperAction[] = [
+  { type: 'CUSTOM', value: 0, label: 'Open' },
+  { type: 'INVERT_MOMENTARY', value: 0, label: 'Inv(M)' },
+  { type: 'INVERT_TOGGLE', value: 0, label: 'Inv(T)' },
+  { type: 'HOME', value: 0, label: 'Home' },
+  { type: 'REPEAT_LAST', value: 0, label: 'Repeat' },
+  { type: 'OCTAVE', value: -1, label: '-Oct' },
+  { type: 'STEP', value: -6, label: '-6' },
+  { type: 'STEP', value: -5, label: '-5' },
+  { type: 'STEP', value: -4, label: '-4' },
+  { type: 'STEP', value: -3, label: '-3' },
+  { type: 'STEP', value: -2, label: '-2' },
+  { type: 'STEP', value: -1, label: '-1' },
+  { type: 'STEP', value: 0, label: '0' },
+  { type: 'STEP', value: 1, label: '+1' },
+  { type: 'STEP', value: 2, label: '+2' },
+  { type: 'STEP', value: 3, label: '+3' },
+  { type: 'STEP', value: 4, label: '+4' },
+  { type: 'STEP', value: 5, label: '+5' },
+  { type: 'STEP', value: 6, label: '+6' },
+  { type: 'OCTAVE', value: 1, label: '+Oct' },
+  { type: 'REPEAT_LAST', value: 0, label: 'Repeat' },
+  { type: 'HOME', value: 0, label: 'Home' },
+  { type: 'INVERT_TOGGLE', value: 0, label: 'Inv(T)' },
+  { type: 'INVERT_MOMENTARY', value: 0, label: 'Inv(M)' }
+];
 
 const DEFAULT_KEY_SWITCHES: ScaleSwitchData[] = [
   { root: 'C', type: 'Major' },
@@ -27,10 +54,10 @@ const getScaleTypeString = (decimalId: number): string => {
   return (lut && lut[decimalId] && lut[decimalId].scale_type) ? lut[decimalId].scale_type : 'Major';
 };
 
-const syncKeySwitches = (state: any, newRoot?: number, newDecimal?: number) => {
+const syncKeySwitches = (state: any, newRoot?: number | null, newDecimal?: number | null) => {
   const idx = state.activeState.activeSwitchIndex;
-  const currentRoot = newRoot !== undefined ? newRoot : state.activeState.rootNote;
-  const currentDecimal = newDecimal !== undefined ? newDecimal : state.activeState.scaleDecimalId;
+  const currentRoot = (newRoot !== undefined && newRoot !== null) ? newRoot : (state.activeState.rootNote ?? 0);
+  const currentDecimal = (newDecimal !== undefined && newDecimal !== null) ? newDecimal : (state.activeState.scaleDecimalId ?? 2741);
   
   const updatedSwitches = [...state.activeState.keySwitches];
   updatedSwitches[idx] = {
@@ -42,8 +69,8 @@ const syncKeySwitches = (state: any, newRoot?: number, newDecimal?: number) => {
 
 const computeNewLastPlayedMidi = (
   state: any,
-  newRootNote: number | undefined,
-  newScaleDecimalId: number | undefined
+  newRootNote: number | null | undefined,
+  newScaleDecimalId: number | null | undefined
 ) => {
   const mode = state.scaleChangeMode;
   const lastPlayed = state.activeState.lastPlayedMidi;
@@ -59,7 +86,8 @@ const computeNewLastPlayedMidi = (
       const pitch_classes = entry ? entry.pitch_class_set : [0, 2, 4, 5, 7, 9, 11];
 
       // STRICT FIX: Positive wrapping modulo to prevent downward octave drift
-      const absolutePitchClasses = pitch_classes.map((pc: number) => (((root + pc) % 12) + 12) % 12);
+      const rootVal = root ?? 0;
+      const absolutePitchClasses = pitch_classes.map((pc: number) => (((rootVal + pc) % 12) + 12) % 12);
 
       const newNote = roundToScale(lastPlayed, absolutePitchClasses, pref);
       console.log(`[Scale Engine] Voice-Leading. Old: ${lastPlayed}, New: ${newNote}`);
@@ -98,6 +126,11 @@ export const useMidiStore = create<MidiStore>((set) => ({
   uiState: {
     activeKeys: [],
     outputActiveKeys: [],
+    stepperInvertToggle: false,
+    stepperInvertMomentary: false,
+    stepperConfig: DEFAULT_STEPPER_CONFIG,
+    stepperActiveNotes: {},
+    lastStepperAction: null,
   },
   playStartSettings: {
     audible: true,
@@ -265,6 +298,153 @@ export const useMidiStore = create<MidiStore>((set) => ({
       },
     })),
 
+  processStepperAction: (index, isNoteOn, executeEngineFn) => {
+    const config = useMidiStore.getState().uiState?.stepperConfig || DEFAULT_STEPPER_CONFIG;
+    const action = config[index];
+    if (!action) return;
+
+    if (isNoteOn) {
+      const state = useMidiStore.getState();
+
+      if (action.type === 'INVERT_TOGGLE') {
+        set((s) => ({
+          uiState: {
+            ...s.uiState,
+            activeKeys: (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index],
+            stepperInvertToggle: !s.uiState?.stepperInvertToggle
+          }
+        }));
+      } else if (action.type === 'INVERT_MOMENTARY') {
+        set((s) => ({
+          uiState: {
+            ...s.uiState,
+            activeKeys: (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index],
+            stepperInvertMomentary: true
+          }
+        }));
+      } else if (action.type === 'HOME') {
+        useMidiStore.getState().triggerHomeReset();
+        let outputMidi: number | null = null;
+        if (executeEngineFn) {
+          outputMidi = executeEngineFn(0);
+        }
+        set((s) => {
+          const nextActiveKeys = (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index];
+          const nextStepperActiveNotes = { ...(s.uiState?.stepperActiveNotes || {}) };
+          if (outputMidi !== null) {
+            nextStepperActiveNotes[index] = outputMidi;
+          }
+          return {
+            uiState: {
+              ...s.uiState,
+              activeKeys: nextActiveKeys,
+              stepperActiveNotes: nextStepperActiveNotes
+            }
+          };
+        });
+      } else if (action.type === 'STEP' || action.type === 'OCTAVE' || action.type === 'REPEAT_LAST') {
+        let effective = null;
+        if (action.type === 'REPEAT_LAST') {
+          effective = state.uiState?.lastStepperAction || null;
+        } else {
+          effective = { type: action.type, value: action.value };
+        }
+
+        if (!effective) {
+          set((s) => ({
+            uiState: {
+              ...s.uiState,
+              activeKeys: (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index]
+            }
+          }));
+          return;
+        }
+
+        const scaleDecimalId = state.activeState.scaleDecimalId;
+        const lut = getLUT();
+        const currentScaleLength = (scaleDecimalId !== null && lut && lut[scaleDecimalId])
+          ? lut[scaleDecimalId].pitch_class_set.length
+          : 7;
+
+        let baseStep = 0;
+        if (effective.type === 'OCTAVE') {
+          baseStep = effective.value * currentScaleLength;
+        } else {
+          baseStep = effective.value;
+        }
+
+        const toggle = state.uiState?.stepperInvertToggle || false;
+        const momentary = state.uiState?.stepperInvertMomentary || false;
+        const isInverted = toggle !== momentary;
+        const finalStep = isInverted ? baseStep * -1 : baseStep;
+
+        let outputMidi: number | null = null;
+        if (executeEngineFn) {
+          outputMidi = executeEngineFn(finalStep);
+        }
+
+        set((s) => {
+          const nextActiveKeys = (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index];
+          const nextStepperActiveNotes = { ...(s.uiState?.stepperActiveNotes || {}) };
+          if (outputMidi !== null) {
+            nextStepperActiveNotes[index] = outputMidi;
+          }
+          const nextLastStepperAction = (action.type !== 'REPEAT_LAST')
+            ? { type: effective.type as 'STEP' | 'OCTAVE', value: effective.value }
+            : s.uiState?.lastStepperAction || null;
+
+          return {
+            uiState: {
+              ...s.uiState,
+              activeKeys: nextActiveKeys,
+              stepperActiveNotes: nextStepperActiveNotes,
+              lastStepperAction: nextLastStepperAction
+            }
+          };
+        });
+      } else {
+        set((s) => ({
+          uiState: {
+            ...s.uiState,
+            activeKeys: (s.uiState?.activeKeys || []).includes(48 + index) ? (s.uiState?.activeKeys || []) : [...(s.uiState?.activeKeys || []), 48 + index]
+          }
+        }));
+      }
+    } else {
+      const state = useMidiStore.getState();
+      const note = state.uiState?.stepperActiveNotes?.[index];
+
+      set((s) => {
+        const nextActiveKeys = (s.uiState?.activeKeys || []).filter((k) => k !== (48 + index));
+        const nextStepperInvertMomentary = (action && action.type === 'INVERT_MOMENTARY') ? false : (s.uiState?.stepperInvertMomentary || false);
+        const nextStepperActiveNotes = { ...(s.uiState?.stepperActiveNotes || {}) };
+        delete nextStepperActiveNotes[index];
+
+        return {
+          uiState: {
+            ...s.uiState,
+            activeKeys: nextActiveKeys,
+            stepperInvertMomentary: nextStepperInvertMomentary,
+            stepperActiveNotes: nextStepperActiveNotes
+          }
+        };
+      });
+
+      if (note !== undefined && note !== null) {
+        let isHeldByAnother = false;
+        const stepperActiveNotes = state.uiState?.stepperActiveNotes || {};
+        Object.entries(stepperActiveNotes).forEach(([key, val]) => {
+          if (Number(key) !== index && val === note) {
+            isHeldByAnother = true;
+          }
+        });
+        if (!isHeldByAnother) {
+          useMidiStore.getState().removeOutputKey(note);
+        }
+      }
+    }
+  },
+
   addOutputKey: (key) =>
     set((state) => {
       if (state.uiState.outputActiveKeys.includes(key)) return {};
@@ -342,6 +522,10 @@ export const useMidiStore = create<MidiStore>((set) => ({
         ...state.uiState,
         activeKeys: [],
         outputActiveKeys: [],
+        stepperInvertToggle: false,
+        stepperInvertMomentary: false,
+        stepperActiveNotes: {},
+        lastStepperAction: null,
       },
       activeState: {
         ...state.activeState,

@@ -46,16 +46,6 @@ export interface ScaleSwitchData {
   type: string;
 }
 
-export interface MidiState {
-  globalSettings: {
-    midiInPort: string | null;
-    power: boolean; // bypass toggle
-    channelFilter: number | 'ALL';
-    startOctave: number; // 0-7
-    roundPreference: 'UP' | 'DOWN';
-    filterMode: 'octave_wrap' | 'smart_wrap';
-    filterRange: [number, number];
-  };
 export interface ActiveState {
   rootNote: number | null; // e.g., 0 for C, 1 for C#
   scaleDecimalId: number | null; // currently selected scale from 12-key selector
@@ -63,8 +53,11 @@ export interface ActiveState {
   keySwitches: ScaleSwitchData[];
   selectedScaleIndex: number;
   activeSwitchIndex: number;
-  isFirstNote: boolean;
+  isFirstNote?: boolean;
 }
+
+export type StepperActionType = 'STEP' | 'OCTAVE' | 'INVERT_TOGGLE' | 'INVERT_MOMENTARY' | 'HOME' | 'REPEAT_LAST' | 'CUSTOM';
+export interface StepperAction { type: StepperActionType; value: number; label: string; }
 
 export interface MidiState {
   globalSettings: {
@@ -80,6 +73,11 @@ export interface MidiState {
   uiState: {
     activeKeys: number[];     // raw MIDI input keys (all zones)
     outputActiveKeys: number[]; // stepper-processed output keys (for output keyboard)
+    stepperInvertToggle: boolean;
+    stepperInvertMomentary: boolean;
+    stepperConfig: StepperAction[];
+    stepperActiveNotes: Record<number, number>;
+    lastStepperAction: { type: 'STEP' | 'OCTAVE'; value: number } | null;
   };
   playStartSettings: PlayStartSettings;
   homeSettings: {
@@ -109,6 +107,8 @@ export interface MidiStoreActions {
   addActiveKey: (key: number) => void;
   removeActiveKey: (key: number) => void;
   clearActiveKeys: () => void;
+
+  processStepperAction: (index: number, isNoteOn: boolean, executeEngineFn?: (offset: number) => number | null) => void;
 
   addOutputKey: (key: number) => void;
   removeOutputKey: (key: number) => void;

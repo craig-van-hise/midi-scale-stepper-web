@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import React from 'react';
 import * as NotationModule from './ScaleInspectorNotation';
 import { useMidiStore } from '../store/useMidiStore';
-import { getLUT, setLUT } from '../utils/lutRegistry';
+import { setLUT } from '../utils/lutRegistry';
 
 describe('ScaleInspectorNotation Click-to-Play', () => {
   beforeEach(() => {

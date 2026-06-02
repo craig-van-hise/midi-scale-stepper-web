@@ -40,9 +40,23 @@ describe('useMidiStore', () => {
       uiState: {
         activeKeys: [],
         outputActiveKeys: [],
+        stepperInvertToggle: false,
+        stepperInvertMomentary: false,
+        stepperConfig: useMidiStore.getState().uiState.stepperConfig,
+        stepperActiveNotes: {},
+        lastStepperAction: null,
       },
       scaleChangeMode: 'follow-root',
     });
+  });
+
+  it('Two-Octave Stepper Phase 1 - Test Case 1: Assert that the store initializes uiState.stepperConfig with exactly 24 items, verifying index 12 is STEP 0', () => {
+    const store = useMidiStore.getState();
+    expect(store.uiState.stepperConfig.length).toBe(24);
+    const item12 = store.uiState.stepperConfig[12];
+    expect(item12.type).toBe('STEP');
+    expect(item12.value).toBe(0);
+    expect(item12.label).toBe('0');
   });
 
   it('should initialize with correct default activeState values on mount', () => {
@@ -148,8 +162,8 @@ describe('useMidiStore', () => {
     const store = useMidiStore.getState();
     // Setup Mock LUT with Dorian (1709) and Major (2741)
     const mockLut = getLUT() || new Array(4096).fill(null);
-    mockLut[2741] = { decimal: 2741, pitch_class_set: [0, 2, 4, 5, 7, 9, 11] };
-    mockLut[1709] = { decimal: 1709, pitch_class_set: [0, 2, 3, 5, 7, 9, 10] }; // Dorian
+    mockLut[2741] = { decimal: 2741, pitch_class_set: [0, 2, 4, 5, 7, 9, 11] } as any;
+    mockLut[1709] = { decimal: 1709, pitch_class_set: [0, 2, 3, 5, 7, 9, 10] } as any; // Dorian
     setLUT(mockLut);
 
     store.setScaleChangeMode('voice-leading');
@@ -349,8 +363,8 @@ describe('useMidiStore', () => {
     
     // Setup Mock LUT
     const mockLut = getLUT() || new Array(4096).fill(null);
-    mockLut[2741] = { decimal: 2741, pitch_class_set: [0, 2, 4, 5, 7, 9, 11], scale_type: 'Major' };
-    mockLut[1709] = { decimal: 1709, pitch_class_set: [0, 2, 3, 5, 7, 9, 10], scale_type: 'Dorian' }; // Dorian
+    mockLut[2741] = { decimal: 2741, pitch_class_set: [0, 2, 4, 5, 7, 9, 11], scale_type: 'Major' } as any;
+    mockLut[1709] = { decimal: 1709, pitch_class_set: [0, 2, 3, 5, 7, 9, 10], scale_type: 'Dorian' } as any; // Dorian
     setLUT(mockLut);
 
     useMidiStore.setState({
@@ -373,5 +387,46 @@ describe('useMidiStore', () => {
 
     expect(useMidiStore.getState().activeState.keySwitches[1].type).toBe('Dorian');
     expect(useMidiStore.getState().activeState.keySwitches[1].root).toBe('C#'); // Unchanged
+  });
+
+  it('Two-Octave Stepper Phase 2 - Test Case 1 (XOR Math): Given toggle=true and momentary=false. Process STEP index 14 (+2). Assert the engine function is called with -2', () => {
+    const store = useMidiStore.getState();
+    useMidiStore.setState({
+      uiState: {
+        ...store.uiState,
+        stepperInvertToggle: true,
+        stepperInvertMomentary: false,
+      }
+    });
+
+    let calledOffset: number | null = null;
+    const mockExecute = (offset: number) => {
+      calledOffset = offset;
+      return 60;
+    };
+
+    useMidiStore.getState().processStepperAction(14, true, mockExecute);
+    expect(calledOffset).toBe(-2);
+  });
+
+  it('Stepper Refinements Phase 1 - Test Case 1: Given a NoteOn event for HOME (index 3), Assert executeEngineFn is called with 0', () => {
+    let calledOffset: number | null = null;
+    const mockExecute = (offset: number) => {
+      calledOffset = offset;
+      return 60;
+    };
+    useMidiStore.getState().processStepperAction(3, true, mockExecute);
+    expect(calledOffset).toBe(0);
+  });
+
+  it('Stepper Refinements Phase 1 - Test Case 2: Assert lastStepperAction remains unchanged when HOME is pressed', () => {
+    useMidiStore.setState({
+      uiState: {
+        ...useMidiStore.getState().uiState,
+        lastStepperAction: { type: 'STEP', value: 2 }
+      }
+    });
+    useMidiStore.getState().processStepperAction(3, true, () => 60);
+    expect(useMidiStore.getState().uiState.lastStepperAction).toEqual({ type: 'STEP', value: 2 });
   });
 });

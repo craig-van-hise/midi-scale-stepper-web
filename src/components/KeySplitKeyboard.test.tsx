@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import React from 'react';
 import KeySplitKeyboard from './KeySplitKeyboard';
 import { useMidiStore } from '../store/useMidiStore';
 
@@ -142,7 +141,7 @@ describe('KeySplitKeyboard Zone Routing', () => {
     });
 
     const { container } = render(<KeySplitKeyboard />);
-    const key = container.querySelector('#pksplit-84'); // C6
+    const key = container.querySelector('#pksplit-84') as HTMLElement; // C6
     expect(key).toBeDefined();
 
     // Check style: if isKeyActive is true, it should have the zone's color (cyan: #06b6d4)

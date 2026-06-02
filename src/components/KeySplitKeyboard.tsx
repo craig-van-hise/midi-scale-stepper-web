@@ -10,7 +10,6 @@ import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
 import { executeScaleStep, applyOutputFilter } from '../utils/ScaleStepperEngine';
-import { STEPPER_DATA_MAP } from './ScaleStepperKeySwitches25';
 import { STANDARD_PITCH_CLASSES, NOTE_TO_PC } from './ScaleKeySwitches12';
 import { roundNote, calculateDynamicStepOffset } from '../utils/RoundingEngine';
 import PlayStartSettingsModal from './PlayStartSettingsModal';
@@ -215,7 +214,7 @@ export default function KeySplitKeyboard() {
       const roundingPreference = state.globalSettings.roundPreference;
       const stepOffset = calculateDynamicStepOffset(note, scaleBitmask, roundingPreference);
       const finalMidi = executeScaleStep(stepOffset);
-      if (finalMidi !== null) {
+      if (finalMidi !== null && finalMidi !== undefined) {
         activeNotesRegistry.current.set(note, finalMidi);
       }
       state.addActiveKey(note);

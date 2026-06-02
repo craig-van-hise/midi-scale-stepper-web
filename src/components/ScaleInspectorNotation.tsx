@@ -10,7 +10,7 @@ const NOTE_COLOR = '#FACC15';
 const SELECTED_COLOR = '#a855f7';
 
 export const outputRouting = {
-  triggerOutputNoteOn: (pitch: number, velocity: number = 64) => {
+  triggerOutputNoteOn: (pitch: number, _velocity: number = 64) => {
     useMidiStore.getState().addOutputKey(pitch);
     // Note: If physical MIDI out is handled globally via a listener on outputActiveKeys,
     // this is sufficient. Otherwise, ensure hardware dispatch happens here.

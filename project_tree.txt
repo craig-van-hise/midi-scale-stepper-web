@@ -1,11 +1,16 @@
 
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
-|  ├── # 28.md
-|  ├── # 29.md
-|  ├── # 30.md
-|  ├── # 31.md
-|  ├── # 32.md
+|  ├── # 36.md
+|  ├── # 37.md
+|  ├── # 38.md
+|  ├── # 39.md
+|  ├── # 40.md
+|  ├── # 41.md
+|  ├── # 42.md
+|  ├── # 43.md
+|  ├── # 44.md
+|  ├── # 45.md
 |  ├── WOs
 |  |  └── MIDI-Scale-Stepper-MVP
 |  |     ├── Phase_1
@@ -47,7 +52,15 @@
 |     ├── # 25.md
 |     ├── # 26.md
 |     ├── # 27.md
+|     ├── # 28.md
+|     ├── # 29.md
 |     ├── # 3.md
+|     ├── # 30.md
+|     ├── # 31.md
+|     ├── # 32.md
+|     ├── # 33.md
+|     ├── # 34.md
+|     ├── # 35.md
 |     ├── # 4.md
 |     ├── # 5.md
 |     ├── # 6.md
@@ -69,6 +82,7 @@
 |  └── fonts
 |     └── Bravura.woff2
 ├── src
+|  ├── App.test.tsx
 |  ├── App.tsx
 |  ├── components
 |  |  ├── Header.test.tsx
@@ -84,11 +98,15 @@
 |  |  ├── NoteRangeFilterKeyboard.tsx
 |  |  ├── PlayStartSettingsModal.test.tsx
 |  |  ├── PlayStartSettingsModal.tsx
+|  |  ├── ScaleChangeSettingsModal.test.tsx
+|  |  ├── ScaleChangeSettingsModal.tsx
 |  |  ├── ScaleInspectorNotation.test.tsx
 |  |  ├── ScaleInspectorNotation.tsx
+|  |  ├── ScaleKeySwitches12.test.tsx
 |  |  ├── ScaleKeySwitches12.tsx
 |  |  ├── ScaleStepperKeySwitches25.test.tsx
 |  |  ├── ScaleStepperKeySwitches25.tsx
+|  |  ├── SettingsModal.test.tsx
 |  |  ├── SettingsModal.tsx
 |  |  └── keyboardMap.ts
 |  ├── hooks
@@ -120,7 +138,7 @@
 ├── tsconfig.json
 └── vite.config.ts
 
-directory: 463 file: 3561
+directory: 463 file: 3579
 
 ignored: directory (69)
 

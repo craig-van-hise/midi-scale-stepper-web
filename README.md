@@ -69,7 +69,9 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 ├── PROJECT_STATE.md           # Project state and module description
 ├── README.md                  # Main developer documentation
 ├── index.html
+├── llms.txt
 ├── package.json
+├── project_tree.txt
 ├── public
 │   ├── PCS_LUT.dat            # Binary Look-Up Table for Pitch Class Sets
 │   └── fonts
@@ -84,6 +86,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── KeySwitchContainer.tsx # Swappable keyswitches/control zone
 │   │   ├── NoteRangeFilterKeyboard.tsx # Note range constraint filter setup
 │   │   ├── PlayStartSettingsModal.tsx # Settings for physical playback split zone
+│   │   ├── ScaleChangeSettingsModal.tsx # Scale change behavior settings modal
 │   │   ├── ScaleInspectorNotation.tsx # Music notation staff rendering
 │   │   ├── ScaleKeySwitches12.tsx # 12 Key switches selector
 │   │   ├── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard

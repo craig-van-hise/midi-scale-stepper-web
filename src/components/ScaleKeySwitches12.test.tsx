@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import React from 'react';
 import ScaleKeySwitches12 from './ScaleKeySwitches12';
 import { useMidiStore } from '../store/useMidiStore';
 

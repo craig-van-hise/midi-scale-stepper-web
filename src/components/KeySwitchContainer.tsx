@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import ScaleKeySwitches12 from './ScaleKeySwitches12';
-import ScaleStepperKeySwitches25 from './ScaleStepperKeySwitches25';
+import ScaleStepperKeySwitches24 from './ScaleStepperKeySwitches24';
 
 export default function KeySwitchContainer() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -40,7 +40,7 @@ export default function KeySwitchContainer() {
               <ScaleKeySwitches12 />
             </div>
             <div style={{ flexShrink: 0 }}>
-              <ScaleStepperKeySwitches25 />
+              <ScaleStepperKeySwitches24 />
             </div>
           </div>
         </div>

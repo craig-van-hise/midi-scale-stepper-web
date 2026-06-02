@@ -1,4 +1,3 @@
-import React from 'react';
 import { useMidiStore } from '../store/useMidiStore';
 import { Ear, X } from 'lucide-react';
 

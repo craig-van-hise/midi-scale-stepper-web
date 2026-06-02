@@ -3,11 +3,16 @@
 
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
-|  ├── # 28.md
-|  ├── # 29.md
-|  ├── # 30.md
-|  ├── # 31.md
-|  ├── # 32.md
+|  ├── # 36.md
+|  ├── # 37.md
+|  ├── # 38.md
+|  ├── # 39.md
+|  ├── # 40.md
+|  ├── # 41.md
+|  ├── # 42.md
+|  ├── # 43.md
+|  ├── # 44.md
+|  ├── # 45.md
 |  ├── WOs
 |  |  └── MIDI-Scale-Stepper-MVP
 |  |     ├── Phase_1
@@ -49,7 +54,15 @@
 |     ├── # 25.md
 |     ├── # 26.md
 |     ├── # 27.md
+|     ├── # 28.md
+|     ├── # 29.md
 |     ├── # 3.md
+|     ├── # 30.md
+|     ├── # 31.md
+|     ├── # 32.md
+|     ├── # 33.md
+|     ├── # 34.md
+|     ├── # 35.md
 |     ├── # 4.md
 |     ├── # 5.md
 |     ├── # 6.md
@@ -71,6 +84,7 @@
 |  └── fonts
 |     └── Bravura.woff2
 ├── src
+|  ├── App.test.tsx
 |  ├── App.tsx
 |  ├── components
 |  |  ├── Header.test.tsx
@@ -86,11 +100,15 @@
 |  |  ├── NoteRangeFilterKeyboard.tsx
 |  |  ├── PlayStartSettingsModal.test.tsx
 |  |  ├── PlayStartSettingsModal.tsx
+|  |  ├── ScaleChangeSettingsModal.test.tsx
+|  |  ├── ScaleChangeSettingsModal.tsx
 |  |  ├── ScaleInspectorNotation.test.tsx
 |  |  ├── ScaleInspectorNotation.tsx
+|  |  ├── ScaleKeySwitches12.test.tsx
 |  |  ├── ScaleKeySwitches12.tsx
 |  |  ├── ScaleStepperKeySwitches25.test.tsx
 |  |  ├── ScaleStepperKeySwitches25.tsx
+|  |  ├── SettingsModal.test.tsx
 |  |  ├── SettingsModal.tsx
 |  |  └── keyboardMap.ts
 |  ├── hooks
@@ -122,7 +140,7 @@
 ├── tsconfig.json
 └── vite.config.ts
 
-directory: 463 file: 3561
+directory: 463 file: 3579
 
 ignored: directory (69)
 
@@ -142,11 +160,6 @@ The project directory structure is laid out as follows:
 ```
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
-│   ├── # 28.md
-│   ├── # 29.md
-│   ├── # 30.md
-│   ├── # 31.md
-│   ├── # 32.md
 │   ├── WOs
 │   │   └── MIDI-Scale-Stepper-MVP
 │   └── xOlder
@@ -165,6 +178,7 @@ The project directory structure is laid out as follows:
 │   └── fonts
 │       └── Bravura.woff2
 ├── src
+│   ├── App.test.tsx
 │   ├── App.tsx
 │   ├── components
 │   │   ├── Header.test.tsx
@@ -180,11 +194,15 @@ The project directory structure is laid out as follows:
 │   │   ├── NoteRangeFilterKeyboard.tsx
 │   │   ├── PlayStartSettingsModal.test.tsx
 │   │   ├── PlayStartSettingsModal.tsx
+│   │   ├── ScaleChangeSettingsModal.test.tsx
+│   │   ├── ScaleChangeSettingsModal.tsx
 │   │   ├── ScaleInspectorNotation.test.tsx
 │   │   ├── ScaleInspectorNotation.tsx
+│   │   ├── ScaleKeySwitches12.test.tsx
 │   │   ├── ScaleKeySwitches12.tsx
 │   │   ├── ScaleStepperKeySwitches25.test.tsx
 │   │   ├── ScaleStepperKeySwitches25.tsx
+│   │   ├── SettingsModal.test.tsx
 │   │   ├── SettingsModal.tsx
 │   │   └── keyboardMap.ts
 │   ├── hooks
@@ -228,20 +246,24 @@ The project directory structure is laid out as follows:
 
 ### Functional Modules
 - **Audio Engine**: 
-  - **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support: C3-B3 for Scale Selection and C4-C6 for Stepper Zone.
-  - **Built-in Synth Engine (`useSynth.ts`)**: A lightweight, warm Web Audio API triangle oscillator synth mapping the active MIDI output state (`outputActiveKeys`) to real-time audio playback.
-- **Tracking Engine & Zustand Store (`useMidiStore.ts`)**: Global state coordinator handling scale indices, active switches, note history, and boundary constraints. All state changes are event-driven.
+  - **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support: C3-B3 for Scale Selection and C4-C6 for Stepper Zone. Includes staggered legato re-triggering prevention, note off ownership validation, and Play/Start output filtering.
+  - **Built-in Synth Engine (`useSynth.ts`)**: A lightweight Web Audio API triangle oscillator synth mapping the active MIDI output state to real-time audio playback.
+- **Tracking Engine & Zustand Store (`useMidiStore.ts`)**: Global state coordinator handling scale indices, active switches, note history, boundary constraints, "First Note Exception" logic, scale presets synchronization, and active key trackers.
 - **Visualizer Modes**:
   - **Music Notation (`ScaleInspectorNotation.tsx`)**: Renders active scales/notes dynamically on a grand staff layout using the Bravura SMuFL font.
-  - **Keyboard Components (`KeySplitKeyboard.tsx`, `NoteRangeFilterKeyboard.tsx`, etc.)**: Provide interactive visual previews of active scales, keyboard splits, and range constraint filters.
-- **UI State Logic & Settings Modals**: Custom settings modals (`SettingsModal.tsx`, `HomeSettingsModal.tsx`, `PlayStartSettingsModal.tsx`) for user-level MIDI configurations, pitch filters, and options.
+  - **Keyboard Components (`KeySplitKeyboard.tsx`, `NoteRangeFilterKeyboard.tsx`, `ScaleStepperKeySwitches25.tsx`, etc.)**: Provide interactive visual previews of active scales, keyboard splits, and range constraint filters.
+- **UI State Logic & Settings Modals**: Custom settings modals (`SettingsModal.tsx`, `HomeSettingsModal.tsx`, `PlayStartSettingsModal.tsx`, `ScaleChangeSettingsModal.tsx`) for user-level MIDI configurations, pitch filters, and scale change behaviors (e.g. Follow Root vs Voice Leading).
 
 ### Current Work-in-Progress / Status
 - **Complete**: All features implemented. Zustand store sync, event routing, physical keyboard mapping, boundary filters, UI controls, and unit tests are complete and passing.
 
 ## 4. Recent Evolution
 
-The project has recently completed all core routing, integration tests, scale-select lift into Zustand, and physical MIDI inputs mapping. A high-fidelity documentation setup (`README.md`) has been created, and version control initialization is underway.
+The project has recently completed critical improvements addressing:
+1. **Play/Start and Octave Desync**: Resolved the Play/Start note zone bugs by decoupling `lastPlayedMidi` updates from output filtering, correcting visual offsets in the keyboard UI, defaulting the octave offset to -2, and verifying with unit tests.
+2. **Legato & Feedback Loop Protection**: Extricated processed/calculated notes from physical active key feedback, added Note Off ownership to prevent premature cutoffs, and addressed legato re-triggering for unison notes.
+3. **Scale and Settings Migrations**: Migrated the "On Scale Change Behavior" preference out of the global settings modal into a dedicated `ScaleChangeSettingsModal.tsx` on the Key Switch container, defaulting to "Follow Root", and synced root/scale changes into the keySwitches preset array.
+4. **Race Conditions & First Note Exception**: Fixed A0 MIDI race conditions and introduced "First Note Exception" logic to bypass stepping math on initial triggers.
 
 
 ### FILE: README.md
@@ -317,7 +339,9 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 ├── PROJECT_STATE.md           # Project state and module description
 ├── README.md                  # Main developer documentation
 ├── index.html
+├── llms.txt
 ├── package.json
+├── project_tree.txt
 ├── public
 │   ├── PCS_LUT.dat            # Binary Look-Up Table for Pitch Class Sets
 │   └── fonts
@@ -332,6 +356,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── KeySwitchContainer.tsx # Swappable keyswitches/control zone
 │   │   ├── NoteRangeFilterKeyboard.tsx # Note range constraint filter setup
 │   │   ├── PlayStartSettingsModal.tsx # Settings for physical playback split zone
+│   │   ├── ScaleChangeSettingsModal.tsx # Scale change behavior settings modal
 │   │   ├── ScaleInspectorNotation.tsx # Music notation staff rendering
 │   │   ├── ScaleKeySwitches12.tsx # 12 Key switches selector
 │   │   ├── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard

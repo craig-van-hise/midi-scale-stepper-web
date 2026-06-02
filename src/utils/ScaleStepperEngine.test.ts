@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useMidiStore } from '../store/useMidiStore';
 import { executeScaleStep, applyOutputFilter } from './ScaleStepperEngine';
-import { STEPPER_DATA_MAP } from '../components/ScaleStepperKeySwitches25';
 import { getLUT } from './lutRegistry';
 
 describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
