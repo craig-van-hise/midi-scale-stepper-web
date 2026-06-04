@@ -99,6 +99,7 @@ export const ScaleInspectorNotation: React.FC = () => {
         rootNote: newRootNote,
         lastPlayedMidi: currentState.lastPlayedMidi,
       });
+      useMidiStore.getState().updateActiveKeySwitchFromNotation(newRootNote, newDecimal);
     }
   }, [pitches]);
 
@@ -366,6 +367,7 @@ export const ScaleInspectorNotation: React.FC = () => {
                   scaleDecimalId: newDecimal,
                   rootNote: newRootNote,
                 });
+                useMidiStore.getState().updateActiveKeySwitchFromNotation(newRootNote, newDecimal);
             }
         }
     }
@@ -474,12 +476,16 @@ export const ScaleInspectorNotation: React.FC = () => {
         onClick={clearSelection}
     >
       {/* Scale Name Header */}
-      <div style={{ 
-        textAlign: 'center', 
-        fontSize: '1.25rem', 
-        fontWeight: 'bold',
-        color: '#0f172a'
-      }}>
+      <div 
+        data-testid="scale-name-header"
+        style={{ 
+          textAlign: 'center', 
+          fontSize: '1.25rem', 
+          fontWeight: 'bold',
+          color: '#0f172a',
+          fontFamily: 'var(--font-display)'
+        }}
+      >
         {scaleData?.rootName} {scaleData?.entry?.scale_type || 'Unknown Scale'}
       </div>
 
@@ -563,18 +569,21 @@ export const ScaleInspectorNotation: React.FC = () => {
                 }}
               >
                 {/* Interval Label (Above) */}
-                <div style={{
-                  position: 'absolute',
-                  top: `calc(50% - ${4.5 * STAFF_SPACE}px)`,
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: '0.875rem',
-                  fontWeight: 'bold',
-                  color: '#475569',
-                  fontFamily: 'monospace',
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none',
-                }}>
+                <div 
+                  data-testid="interval-label"
+                  style={{
+                    position: 'absolute',
+                    top: `calc(50% - ${4.5 * STAFF_SPACE}px)`,
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '0.875rem',
+                    fontWeight: 'bold',
+                    color: '#475569',
+                    fontFamily: "'Roboto Mono', monospace",
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}
+                >
                   {scaleData?.entry?.scale_intervals?.[index] || '-'}
                 </div>
 
@@ -588,6 +597,7 @@ export const ScaleInspectorNotation: React.FC = () => {
                   fontWeight: 'bold',
                   color: '#0f172a',
                   pointerEvents: 'none',
+                  fontFamily: 'var(--font-sans)',
                 }}
                 data-testid="note-name-label"
               >

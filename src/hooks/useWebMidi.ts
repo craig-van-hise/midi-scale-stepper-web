@@ -3,7 +3,7 @@ import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
 import { STANDARD_PITCH_CLASSES, NOTE_TO_PC } from '../components/ScaleKeySwitches12';
 import { executeScaleStep, applyOutputFilter } from '../utils/ScaleStepperEngine';
-import { roundNote, calculateDynamicStepOffset } from '../utils/RoundingEngine';
+import { roundNote } from '../utils/RoundingEngine';
 
 export function useWebMidi() {
   const [midiAccess, setMidiAccess] = useState<MIDIAccess | null>(null);
@@ -97,6 +97,12 @@ export function useWebMidi() {
         return;
       }
 
+      const size = useMidiStore.getState().globalSettings.inputKeyboardSize || 88;
+      const rootZone = size === 88 ? [24, 35] : [36, 47];
+      const scaleZone = size === 88 ? [36, 47] : [48, 59];
+      const stepperZone = size === 88 ? [48, 71] : [60, 71];
+      const playStartBound = 72;
+
       // Note On
       if (command === 0x90 && velocity > 0) {
         // 1. Home Zone Intercept: 21 - 23 (A0 - B0)
@@ -120,16 +126,16 @@ export function useWebMidi() {
           return;
         }
         
-        // 2. Root Select Zone: 24 - 35 (C1 - B1)
-        if (note >= 24 && note <= 35) {
-          const rootNote = note - 24;
+        // 2. Root Select Zone
+        if (note >= rootZone[0] && note <= rootZone[1]) {
+          const rootNote = note - rootZone[0];
           useMidiStore.getState().setRootNote(rootNote);
           return;
         }
 
-        // 3. Scale Select Zone: 36 - 47 (C2 - B2)
-        if (note >= 36 && note <= 47) {
-          const switchIndex = note - 36;
+        // 3. Scale Select Zone
+        if (note >= scaleZone[0] && note <= scaleZone[1]) {
+          const switchIndex = note - scaleZone[0];
           const activeState = useMidiStore.getState().activeState;
           const scaleObj = activeState.keySwitches[switchIndex];
           if (scaleObj) {
@@ -146,15 +152,15 @@ export function useWebMidi() {
           return;
         }
 
-        // 4. Stepper Zone: 48 - 71 (C3 - B4)
-        if (note >= 48 && note <= 71) {
+        // 4. Stepper Zone
+        if (note >= stepperZone[0] && note <= stepperZone[1]) {
           const index = note - 48;
           useMidiStore.getState().processStepperAction(index, true, executeScaleStep);
           return;
         }
 
-        // 5. Play/Start Note Zone: 73 - 108 (C#5 - C8)
-        if (note >= 73 && note <= 108) {
+        // 5. Play/Start Note Zone: playStartBound - 108
+        if (note >= playStartBound && note <= 108) {
           const state = useMidiStore.getState();
           const { rounded, audible, octaveOffset } = state.playStartSettings;
           const { filterMode, filterRange } = state.globalSettings;
@@ -208,18 +214,18 @@ export function useWebMidi() {
           }
           return;
         }
-        if (note >= 24 && note <= 35) {
+        if (note >= rootZone[0] && note <= rootZone[1]) {
           return;
         }
-        if (note >= 36 && note <= 47) {
+        if (note >= scaleZone[0] && note <= scaleZone[1]) {
           return;
         }
-        if (note >= 48 && note <= 71) {
+        if (note >= stepperZone[0] && note <= stepperZone[1]) {
           const index = note - 48;
           useMidiStore.getState().processStepperAction(index, false);
           return;
         }
-        if (note >= 73 && note <= 108) {
+        if (note >= playStartBound && note <= 108) {
           const targetNote = activeNotesRegistry.current.get(note);
           const freshState = useMidiStore.getState();
           if (targetNote !== undefined) {

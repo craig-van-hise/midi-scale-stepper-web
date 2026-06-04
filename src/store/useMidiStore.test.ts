@@ -14,6 +14,7 @@ describe('useMidiStore', () => {
         roundPreference: 'UP',
         filterMode: 'smart_wrap',
         filterRange: [36, 83],
+        inputKeyboardSize: 88,
       },
       activeState: {
         rootNote: 0,
@@ -338,7 +339,7 @@ describe('useMidiStore', () => {
     expect(store.scaleChangeMode).toBe('follow-root');
   });
 
-  it('Phase 2 Test Case 1: Given activeSwitchIndex is 0 and current preset is C Major, When setRootNote(2) is called (D), Assert activeState.keySwitches[0].root updates to D', () => {
+  it('Phase 2 Test Case 1: Given activeSwitchIndex is 0 and current preset is C Major, When setRootNote(2) is called (D), Assert activeState.keySwitches[0].root remains unchanged (C) due to no passive synchronization', () => {
     const store = useMidiStore.getState();
     useMidiStore.setState({
       activeState: {
@@ -354,11 +355,11 @@ describe('useMidiStore', () => {
     });
 
     useMidiStore.getState().setRootNote(2); // D
-    expect(useMidiStore.getState().activeState.keySwitches[0].root).toBe('D');
+    expect(useMidiStore.getState().activeState.keySwitches[0].root).toBe('C'); // Unchanged passively
     expect(useMidiStore.getState().activeState.keySwitches[0].type).toBe('Major'); // Unchanged
   });
 
-  it('Phase 2 Test Case 2: Given activeSwitchIndex is 1, When setActiveState({ scaleDecimalId: 1709 }) is called, Assert activeState.keySwitches[1].type updates to Dorian', () => {
+  it('Phase 2 Test Case 2: Given activeSwitchIndex is 1, When setActiveState({ scaleDecimalId: 1709 }) is called, Assert activeState.keySwitches[1].type remains unchanged (Major) due to no passive synchronization', () => {
     const store = useMidiStore.getState();
     
     // Setup Mock LUT
@@ -385,8 +386,36 @@ describe('useMidiStore', () => {
       scaleDecimalId: 1709,
     });
 
-    expect(useMidiStore.getState().activeState.keySwitches[1].type).toBe('Dorian');
+    expect(useMidiStore.getState().activeState.keySwitches[1].type).toBe('Major'); // Unchanged passively
     expect(useMidiStore.getState().activeState.keySwitches[1].root).toBe('C#'); // Unchanged
+  });
+
+  it('Phase 2 Test Case 3: Verify updateActiveKeySwitchFromNotation action updates the keyswitch array at the active index explicitly', () => {
+    const store = useMidiStore.getState();
+    
+    // Setup Mock LUT
+    const mockLut = getLUT() || new Array(4096).fill(null);
+    mockLut[1709] = { decimal: 1709, pitch_class_set: [0, 2, 3, 5, 7, 9, 10], scale_type: 'Dorian' } as any;
+    setLUT(mockLut);
+
+    useMidiStore.setState({
+      lutReady: true,
+      activeState: {
+        ...store.activeState,
+        activeSwitchIndex: 1,
+        rootNote: 1, // C#
+        scaleDecimalId: 2741,
+        keySwitches: [
+          { root: 'C', type: 'Major' },
+          { root: 'C#', type: 'Major' },
+        ]
+      }
+    });
+
+    useMidiStore.getState().updateActiveKeySwitchFromNotation(2, 1709); // D Dorian
+
+    expect(useMidiStore.getState().activeState.keySwitches[1].root).toBe('D');
+    expect(useMidiStore.getState().activeState.keySwitches[1].type).toBe('Dorian');
   });
 
   it('Two-Octave Stepper Phase 2 - Test Case 1 (XOR Math): Given toggle=true and momentary=false. Process STEP index 14 (+2). Assert the engine function is called with -2', () => {
@@ -428,5 +457,31 @@ describe('useMidiStore', () => {
     });
     useMidiStore.getState().processStepperAction(3, true, () => 60);
     expect(useMidiStore.getState().uiState.lastStepperAction).toEqual({ type: 'STEP', value: 2 });
+  });
+
+  it('Phase 1 - Test Case 1: Given the default configuration, call updateStepperConfig(0, { type: "STEP", value: 12, label: "+12" }). Assert uiState.stepperConfig[0].value equals 12', () => {
+    const store = useMidiStore.getState();
+    store.updateStepperConfig(0, { type: 'STEP', value: 12, label: '+12' });
+    expect(useMidiStore.getState().uiState.stepperConfig[0]).toEqual({
+      type: 'STEP',
+      value: 12,
+      label: '+12'
+    });
+  });
+
+  it('Phase 2 - Test Case 1: Call setInputKeyboardSize(49). Assert playStartSettings.octaveOffset equals -1', () => {
+    const store = useMidiStore.getState();
+    store.setInputKeyboardSize(49);
+    expect(useMidiStore.getState().globalSettings.inputKeyboardSize).toBe(49);
+    expect(useMidiStore.getState().playStartSettings.octaveOffset).toBe(-1);
+  });
+
+  it('Phase 2 - Test Case 2: Call setInputKeyboardSize(88). Assert playStartSettings.octaveOffset equals -2', () => {
+    const store = useMidiStore.getState();
+    store.setInputKeyboardSize(49);
+    expect(useMidiStore.getState().playStartSettings.octaveOffset).toBe(-1);
+    store.setInputKeyboardSize(88);
+    expect(useMidiStore.getState().globalSettings.inputKeyboardSize).toBe(88);
+    expect(useMidiStore.getState().playStartSettings.octaveOffset).toBe(-2);
   });
 });

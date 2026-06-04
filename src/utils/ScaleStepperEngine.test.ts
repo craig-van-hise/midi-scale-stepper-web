@@ -32,6 +32,7 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
         isFirstNote: false,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -86,6 +87,7 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
         isFirstNote: true,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -124,6 +126,7 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
         isFirstNote: false,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -164,6 +167,7 @@ describe('ScaleStepperEngine & Phase 1/2 Verification', () => {
         isFirstNote: false,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [62],
       }

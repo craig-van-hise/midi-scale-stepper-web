@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import ScaleStepperKeySwitches24, { getDynamicLabel } from './ScaleStepperKeySwitches24';
-import { executeScaleStep } from '../utils/ScaleStepperEngine';
 import { useMidiStore } from '../store/useMidiStore';
 
 vi.mock('../utils/ScaleStepperEngine', () => ({
@@ -110,5 +109,61 @@ describe('ScaleStepperKeySwitches24', () => {
     const { getAllByText } = render(<ScaleStepperKeySwitches24 />);
     expect(getAllByText('Tog').length).toBe(2);
     expect(getAllByText('Hold').length).toBe(2);
+  });
+
+  it('Phase 3 - Test Case 1: Mock a contextmenu event on a key div, assert e.preventDefault is called, and the StepperContextMenu component mounts', () => {
+    document.body.innerHTML = '';
+    const { container } = render(<ScaleStepperKeySwitches24 />);
+    const whiteKey = container.querySelector('[data-key-index="0"]');
+    expect(whiteKey).not.toBeNull();
+
+    const event = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 100,
+      clientY: 200,
+    });
+    
+    fireEvent(whiteKey!, event);
+
+    expect(event.defaultPrevented).toBe(true);
+
+    const menu = document.body.querySelector('#stepper-context-menu');
+    expect(menu).not.toBeNull();
+  });
+
+  it('Phase 1 - Test Case 1: Simulate a PointerDown event with button: 2 on a key. Assert the store\'s processStepperAction is NOT called', () => {
+    const processSpy = vi.spyOn(useMidiStore.getState(), 'processStepperAction');
+    const { container } = render(<ScaleStepperKeySwitches24 />);
+    const whiteKey = container.querySelector('[data-key-index="0"]');
+    expect(whiteKey).not.toBeNull();
+
+    const event = new MouseEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+    });
+    fireEvent(whiteKey!, event);
+
+    expect(processSpy).not.toHaveBeenCalled();
+    processSpy.mockRestore();
+  });
+
+  it('Phase 1 - Test Case 2: Simulate a PointerDown event with ctrlKey: true and button: 0. Assert processStepperAction is NOT called', () => {
+    const processSpy = vi.spyOn(useMidiStore.getState(), 'processStepperAction');
+    const { container } = render(<ScaleStepperKeySwitches24 />);
+    const whiteKey = container.querySelector('[data-key-index="0"]');
+    expect(whiteKey).not.toBeNull();
+
+    const event = new MouseEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true,
+    });
+    fireEvent(whiteKey!, event);
+
+    expect(processSpy).not.toHaveBeenCalled();
+    processSpy.mockRestore();
   });
 });

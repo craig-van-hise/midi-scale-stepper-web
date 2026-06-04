@@ -1,3 +1,4 @@
 /README.md
 /PROJECT_STATE.md
+/FONTS.md
 /llms.txt

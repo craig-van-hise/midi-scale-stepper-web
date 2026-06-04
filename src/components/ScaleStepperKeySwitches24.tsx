@@ -3,6 +3,8 @@ import React from 'react';
 import { useMidiStore } from '../store/useMidiStore';
 import { executeScaleStep } from '../utils/ScaleStepperEngine';
 import { Home, Repeat, ArrowUpDown } from 'lucide-react';
+import StepperContextMenu from './StepperContextMenu';
+import type { StepperAction } from '../types/midi';
 
 export const getDynamicLabel = (action: any, isInverted: boolean): string => {
   if (!action) return '';
@@ -136,11 +138,18 @@ const getBlackStyle = (isSelected: boolean): React.CSSProperties => ({
 
 export const ScaleStepperKeySwitches24: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState<number>(12); // C4 default
+  const [contextMenu, setContextMenu] = useState<{ isOpen: boolean; x: number; y: number; index: number; action: StepperAction } | null>(null);
   const activeKeys = useMidiStore((state) => state.uiState.activeKeys);
   const stepperConfig = useMidiStore((state) => state.uiState.stepperConfig);
   const stepperInvertToggle = useMidiStore((state) => state.uiState.stepperInvertToggle);
   const stepperInvertMomentary = useMidiStore((state) => state.uiState.stepperInvertMomentary);
   const isInverted = stepperInvertToggle !== stepperInvertMomentary;
+
+  const handleContextMenu = (e: React.MouseEvent, index: number, action: StepperAction) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ isOpen: true, x: e.pageX, y: e.pageY, index, action });
+  };
 
   // When a MIDI note in the stepper zone (48-71) is pressed, highlight that key
   useEffect(() => {
@@ -260,10 +269,16 @@ export const ScaleStepperKeySwitches24: React.FC = () => {
               style={getWhiteStyle(isSelected)}
               onPointerDown={(e) => {
                 e.preventDefault();
+                if (e.button === 2 || e.ctrlKey) return;
                 handlePointerDown(i);
               }}
               onPointerUp={() => handlePointerUp(i)}
               onPointerLeave={() => handlePointerUp(i)}
+              onContextMenu={(e) => {
+                if (action) {
+                  handleContextMenu(e, i, action);
+                }
+              }}
             >
               <span style={{ fontSize: '12px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {renderKeyLabel(action, isInverted)}
@@ -277,6 +292,7 @@ export const ScaleStepperKeySwitches24: React.FC = () => {
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
+                    if (e.button === 2 || e.ctrlKey) return;
                     handlePointerDown(i + 1);
                   }}
                   onPointerUp={(e) => {
@@ -284,6 +300,11 @@ export const ScaleStepperKeySwitches24: React.FC = () => {
                     handlePointerUp(i + 1);
                   }}
                   onPointerLeave={() => handlePointerUp(i + 1)}
+                  onContextMenu={(e) => {
+                    if (nextAction) {
+                      handleContextMenu(e, i + 1, nextAction);
+                    }
+                  }}
                 >
                   <span style={{ fontSize: '9px', fontWeight: 'bold', pointerEvents: 'none', userSelect: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {renderKeyLabel(nextAction, isInverted)}
@@ -294,6 +315,15 @@ export const ScaleStepperKeySwitches24: React.FC = () => {
           );
         })}
       </div>
+      {contextMenu?.isOpen && (
+        <StepperContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          index={contextMenu.index}
+          initialAction={contextMenu.action}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 };

@@ -12,7 +12,11 @@ describe('Header Component', () => {
   it('invokes store panic (clears active keys and lastPlayedMidi) when the Panic button is clicked', () => {
     // Populate store keys first
     useMidiStore.setState({
-      uiState: { activeKeys: [60, 62, 64], outputActiveKeys: [] },
+      uiState: {
+        ...useMidiStore.getState().uiState,
+        activeKeys: [60, 62, 64],
+        outputActiveKeys: []
+      },
       activeState: { rootNote: null, scaleDecimalId: null, lastPlayedMidi: 60, keySwitches: [], selectedScaleIndex: 0, activeSwitchIndex: 0 }
     });
 

@@ -3,16 +3,9 @@
 
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
-|  ├── # 36.md
-|  ├── # 37.md
-|  ├── # 38.md
-|  ├── # 39.md
-|  ├── # 40.md
-|  ├── # 41.md
-|  ├── # 42.md
-|  ├── # 43.md
-|  ├── # 44.md
-|  ├── # 45.md
+|  ├── # 61.md
+|  ├── # 62.md
+|  ├── # 63.md
 |  ├── WOs
 |  |  └── MIDI-Scale-Stepper-MVP
 |  |     ├── Phase_1
@@ -63,12 +56,38 @@
 |     ├── # 33.md
 |     ├── # 34.md
 |     ├── # 35.md
+|     ├── # 36.md
+|     ├── # 37.md
+|     ├── # 38.md
+|     ├── # 39.md
 |     ├── # 4.md
+|     ├── # 40.md
+|     ├── # 41.md
+|     ├── # 42.md
+|     ├── # 43.md
+|     ├── # 44.md
+|     ├── # 45.md
+|     ├── # 46.md
+|     ├── # 47.md
+|     ├── # 48.md
+|     ├── # 49.md
 |     ├── # 5.md
+|     ├── # 50.md
+|     ├── # 51.md
+|     ├── # 52.md
+|     ├── # 53.md
+|     ├── # 54.md
+|     ├── # 55.md
+|     ├── # 56.md
+|     ├── # 57.md
+|     ├── # 58.md
+|     ├── # 59.md
 |     ├── # 6.md
+|     ├── # 60.md
 |     ├── # 7.md
 |     ├── # 8.md
 |     └── # 9.md
+├── FONTS.md
 ├── PDD.md
 ├── PRD.md
 ├── PROJECT_CONTEXT_BUNDLE.md
@@ -91,6 +110,8 @@
 |  |  ├── Header.tsx
 |  |  ├── HomeSettingsModal.tsx
 |  |  ├── InfoModal.tsx
+|  |  ├── InputSettingsModal.test.tsx
+|  |  ├── InputSettingsModal.tsx
 |  |  ├── KeySplitKeyboard.test-helper.ts
 |  |  ├── KeySplitKeyboard.test.tsx
 |  |  ├── KeySplitKeyboard.tsx
@@ -106,10 +127,12 @@
 |  |  ├── ScaleInspectorNotation.tsx
 |  |  ├── ScaleKeySwitches12.test.tsx
 |  |  ├── ScaleKeySwitches12.tsx
-|  |  ├── ScaleStepperKeySwitches25.test.tsx
-|  |  ├── ScaleStepperKeySwitches25.tsx
+|  |  ├── ScaleStepperKeySwitches24.test.tsx
+|  |  ├── ScaleStepperKeySwitches24.tsx
 |  |  ├── SettingsModal.test.tsx
 |  |  ├── SettingsModal.tsx
+|  |  ├── StepperContextMenu.test.tsx
+|  |  ├── StepperContextMenu.tsx
 |  |  └── keyboardMap.ts
 |  ├── hooks
 |  |  ├── useSynth.ts
@@ -140,7 +163,7 @@
 ├── tsconfig.json
 └── vite.config.ts
 
-directory: 463 file: 3579
+directory: 463 file: 3602
 
 ignored: directory (69)
 
@@ -160,9 +183,14 @@ The project directory structure is laid out as follows:
 ```
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
+│   ├── # 61.md
+│   ├── # 62.md
+│   ├── # 63.md
 │   ├── WOs
-│   │   └── MIDI-Scale-Stepper-MVP
+│   │   └── ...
 │   └── xOlder
+│       └── ...
+├── FONTS.md
 ├── PDD.md
 ├── PRD.md
 ├── PROJECT_CONTEXT_BUNDLE.md
@@ -185,6 +213,8 @@ The project directory structure is laid out as follows:
 │   │   ├── Header.tsx
 │   │   ├── HomeSettingsModal.tsx
 │   │   ├── InfoModal.tsx
+│   │   ├── InputSettingsModal.test.tsx
+│   │   ├── InputSettingsModal.tsx
 │   │   ├── KeySplitKeyboard.test-helper.ts
 │   │   ├── KeySplitKeyboard.test.tsx
 │   │   ├── KeySplitKeyboard.tsx
@@ -200,10 +230,12 @@ The project directory structure is laid out as follows:
 │   │   ├── ScaleInspectorNotation.tsx
 │   │   ├── ScaleKeySwitches12.test.tsx
 │   │   ├── ScaleKeySwitches12.tsx
-│   │   ├── ScaleStepperKeySwitches25.test.tsx
-│   │   ├── ScaleStepperKeySwitches25.tsx
+│   │   ├── ScaleStepperKeySwitches24.test.tsx
+│   │   ├── ScaleStepperKeySwitches24.tsx
 │   │   ├── SettingsModal.test.tsx
 │   │   ├── SettingsModal.tsx
+│   │   ├── StepperContextMenu.test.tsx
+│   │   ├── StepperContextMenu.tsx
 │   │   └── keyboardMap.ts
 │   ├── hooks
 │   │   ├── useSynth.ts
@@ -238,7 +270,7 @@ The project directory structure is laid out as follows:
 ## 2. Tech Stack
 
 - **Core**: React 19, TypeScript 5.7, Vite 6.1
-- **Styling**: TailwindCSS v4
+- **Styling**: TailwindCSS v4 (using vanilla CSS theme variables)
 - **State Management**: Zustand 5.0
 - **Testing**: Vitest 3.0, JSDOM 26, React Testing Library 16
 
@@ -246,13 +278,14 @@ The project directory structure is laid out as follows:
 
 ### Functional Modules
 - **Audio Engine**: 
-  - **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support: C3-B3 for Scale Selection and C4-C6 for Stepper Zone. Includes staggered legato re-triggering prevention, note off ownership validation, and Play/Start output filtering.
+  - **MIDI Input Engine (`useWebMidi.ts`)**: Real-time MIDI interception with dual-zone support: C3-B3 for Scale Selection and C4-C6 for Stepper Zone. Includes staggered legato re-triggering prevention, note off ownership validation, and Play/Start output filtering. Supports configurable physical keyboard size truncation.
   - **Built-in Synth Engine (`useSynth.ts`)**: A lightweight Web Audio API triangle oscillator synth mapping the active MIDI output state to real-time audio playback.
-- **Tracking Engine & Zustand Store (`useMidiStore.ts`)**: Global state coordinator handling scale indices, active switches, note history, boundary constraints, "First Note Exception" logic, scale presets synchronization, and active key trackers.
+- **Tracking Engine & Zustand Store (`useMidiStore.ts`)**: Global state coordinator handling scale indices, active switches, note history, boundary constraints, "First Note Exception" logic, scale presets synchronization, custom stepper configurations, and active key trackers.
 - **Visualizer Modes**:
-  - **Music Notation (`ScaleInspectorNotation.tsx`)**: Renders active scales/notes dynamically on a grand staff layout using the Bravura SMuFL font.
-  - **Keyboard Components (`KeySplitKeyboard.tsx`, `NoteRangeFilterKeyboard.tsx`, `ScaleStepperKeySwitches25.tsx`, etc.)**: Provide interactive visual previews of active scales, keyboard splits, and range constraint filters.
-- **UI State Logic & Settings Modals**: Custom settings modals (`SettingsModal.tsx`, `HomeSettingsModal.tsx`, `PlayStartSettingsModal.tsx`, `ScaleChangeSettingsModal.tsx`) for user-level MIDI configurations, pitch filters, and scale change behaviors (e.g. Follow Root vs Voice Leading).
+  - **Music Notation (`ScaleInspectorNotation.tsx`)**: Renders active scales/notes dynamically on a grand staff layout using the Bravura SMuFL font, styled with standardized Outfit, Inter, and Roboto Mono typography.
+  - **Keyboard Components (`KeySplitKeyboard.tsx`, `NoteRangeFilterKeyboard.tsx`, `ScaleStepperKeySwitches24.tsx`, etc.)**: Provide interactive visual previews of active scales, keyboard splits, and range constraint filters.
+- **UI State Logic & Settings Modals**: Custom settings modals (`SettingsModal.tsx`, `HomeSettingsModal.tsx`, `PlayStartSettingsModal.tsx`, `ScaleChangeSettingsModal.tsx`, `InputSettingsModal.tsx`) for user-level MIDI configurations, pitch filters, input keyboard sizes, and scale change behaviors (e.g. Follow Root vs Voice Leading).
+- **Interactive Triggers & Context Menus**: `StepperContextMenu.tsx` allows right-click custom configurations for the 24 stepper keys (Step Offset, Octave Offset, Invert Toggle/Momentary, Home Reset, Repeat Last Action, Custom Bypass).
 
 ### Current Work-in-Progress / Status
 - **Complete**: All features implemented. Zustand store sync, event routing, physical keyboard mapping, boundary filters, UI controls, and unit tests are complete and passing.
@@ -260,10 +293,11 @@ The project directory structure is laid out as follows:
 ## 4. Recent Evolution
 
 The project has recently completed critical improvements addressing:
-1. **Play/Start and Octave Desync**: Resolved the Play/Start note zone bugs by decoupling `lastPlayedMidi` updates from output filtering, correcting visual offsets in the keyboard UI, defaulting the octave offset to -2, and verifying with unit tests.
-2. **Legato & Feedback Loop Protection**: Extricated processed/calculated notes from physical active key feedback, added Note Off ownership to prevent premature cutoffs, and addressed legato re-triggering for unison notes.
-3. **Scale and Settings Migrations**: Migrated the "On Scale Change Behavior" preference out of the global settings modal into a dedicated `ScaleChangeSettingsModal.tsx` on the Key Switch container, defaulting to "Follow Root", and synced root/scale changes into the keySwitches preset array.
-4. **Race Conditions & First Note Exception**: Fixed A0 MIDI race conditions and introduced "First Note Exception" logic to bypass stepping math on initial triggers.
+1. **Typography Standardization**: Standardized fonts across the application to a cohesive design system using Google Fonts (Outfit for headers, Inter for UI text/labels, and Roboto Mono for intervals and tabular text).
+2. **Keyboard Inversion Bug Fix**: Stripped inversion-awareness from `KeySplitKeyboard.tsx` handlers to make it a dumb physical controller passing raw index data, resolving the double-inversion bug.
+3. **UI Layout Alignment**: Realigned the Octave Knob absolute positioning above the Play/Start zone using precise midpoint centering math relative to its layout margins.
+4. **Input Size & Context Menus**: Added physical keyboard size truncation configurations (88-key vs 49-key modes) via `InputSettingsModal.tsx` and custom per-key action triggers (Invert, Octave, Reset, Repeat) via `StepperContextMenu.tsx`.
+5. **Legato & Feedback Protection**: Extricated calculated notes from active physical key feedback and added note-off ownership validation.
 
 
 ### FILE: README.md
@@ -334,6 +368,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 
 ```
 .
+├── FONTS.md                   # Typography documentation
 ├── PDD.md                     # Product Design Document
 ├── PRD.md                     # Product Requirements Document
 ├── PROJECT_STATE.md           # Project state and module description
@@ -352,6 +387,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── Header.tsx         # Connection info and global control
 │   │   ├── HomeSettingsModal.tsx # Settings for MIDI mode selection
 │   │   ├── InfoModal.tsx      # Application information and guide
+│   │   ├── InputSettingsModal.tsx # Physical controller size configuration modal
 │   │   ├── KeySplitKeyboard.tsx # Interactive visual keyboard split preview
 │   │   ├── KeySwitchContainer.tsx # Swappable keyswitches/control zone
 │   │   ├── NoteRangeFilterKeyboard.tsx # Note range constraint filter setup
@@ -359,8 +395,10 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── ScaleChangeSettingsModal.tsx # Scale change behavior settings modal
 │   │   ├── ScaleInspectorNotation.tsx # Music notation staff rendering
 │   │   ├── ScaleKeySwitches12.tsx # 12 Key switches selector
-│   │   ├── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard
-│   │   └── SettingsModal.tsx  # General and developer options
+│   │   ├── ScaleStepperKeySwitches24.tsx # 24 Stepper controls keyboard
+│   │   ├── SettingsModal.tsx  # General and developer options
+│   │   ├── StepperContextMenu.tsx # Context menu for mapping custom keyswitch actions
+│   │   └── keyboardMap.ts
 │   ├── hooks
 │   │   ├── useSynth.ts        # Built-in synthesizer engine
 │   │   └── useWebMidi.ts      # Web MIDI listener & dispatcher

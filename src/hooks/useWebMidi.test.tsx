@@ -230,6 +230,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         activeSwitchIndex: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -301,6 +302,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         activeSwitchIndex: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -370,6 +372,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         activeSwitchIndex: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -438,6 +441,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -516,6 +520,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -583,6 +588,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -689,6 +695,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         keySwitches: [],
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -770,6 +777,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         audible: true,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -860,6 +868,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         audible: true,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -961,6 +970,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -1033,6 +1043,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -1104,6 +1115,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: -2,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -1175,6 +1187,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: -2,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -1356,6 +1369,7 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
         octaveOffset: -4, // so note 84 (C6) + (-4 * 12) = 36 (C2)
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -1444,5 +1458,216 @@ describe('Web MIDI Integration & LUT Memory Check', () => {
     } as any);
 
     expect(processStepperActionSpy).toHaveBeenCalledWith(0, true, expect.any(Function));
+  });
+
+  it('Phase 2 Checkpoint: Test Case 1 - In useWebMidi.ts tests, simulate MIDI NoteOn 72. Assert it is routed to the Play/Start handler, NOT the Stepper handler', async () => {
+    const mockInput = {
+      id: 'mock-input-1',
+      name: 'Mock MIDI Input',
+      onmidimessage: null as any,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    
+    mockRequestMIDIAccess.mockResolvedValue({
+      inputs: {
+        values: () => [mockInput][Symbol.iterator](),
+        get: (_id: string) => mockInput,
+        size: 1,
+      },
+      outputs: {
+        values: () => [][Symbol.iterator](),
+        size: 0,
+      },
+      onstatechange: null,
+    });
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: 'mock-input-1',
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'octave_wrap',
+        filterRange: [21, 108],
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+      },
+      playStartSettings: {
+        audible: true,
+        rounded: false,
+        octaveOffset: 0,
+      },
+      uiState: {
+        activeKeys: [],
+        outputActiveKeys: [],
+        stepperInvertToggle: false,
+        stepperInvertMomentary: false,
+        stepperConfig: useMidiStore.getState().uiState.stepperConfig,
+        stepperActiveNotes: {},
+        lastStepperAction: null,
+      }
+    });
+
+    const processStepperActionSpy = vi.spyOn(useMidiStore.getState(), 'processStepperAction');
+
+    renderHook(() => useWebMidi());
+
+    await vi.waitFor(() => {
+      expect(mockInput.onmidimessage).toBeTypeOf('function');
+    });
+
+    // NoteOn 72 (C5)
+    mockInput.onmidimessage({
+      data: new Uint8Array([0x90, 72, 100])
+    } as any);
+
+    // It should NOT call the stepper handler
+    expect(processStepperActionSpy).not.toHaveBeenCalled();
+
+    // It should route to Play/Start Note zone:
+    expect(useMidiStore.getState().activeState.lastPlayedMidi).toBe(72);
+    expect(useMidiStore.getState().uiState.activeKeys).toContain(72);
+    expect(useMidiStore.getState().uiState.outputActiveKeys).toContain(72);
+
+    processStepperActionSpy.mockRestore();
+  });
+
+  it('Phase 2 - Test Case 1: Given size = 49, simulate NoteOn 60. Assert processStepperAction is called with index 12', async () => {
+    const mockInput = {
+      id: 'mock-input-1',
+      name: 'Mock MIDI Input',
+      onmidimessage: null as any,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    mockRequestMIDIAccess.mockResolvedValue({
+      inputs: {
+        values: () => [mockInput][Symbol.iterator](),
+        get: (_id: string) => mockInput,
+        size: 1,
+      },
+      outputs: {
+        values: () => [][Symbol.iterator](),
+        size: 0,
+      },
+      onstatechange: null,
+    });
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: 'mock-input-1',
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'octave_wrap',
+        filterRange: [21, 108],
+        inputKeyboardSize: 49,
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+      },
+      uiState: {
+        ...useMidiStore.getState().uiState,
+        activeKeys: [],
+        outputActiveKeys: [],
+      }
+    });
+
+    const processStepperActionSpy = vi.spyOn(useMidiStore.getState(), 'processStepperAction');
+
+    renderHook(() => useWebMidi());
+
+    await vi.waitFor(() => {
+      expect(mockInput.onmidimessage).toBeTypeOf('function');
+    });
+
+    // NoteOn 60
+    mockInput.onmidimessage({
+      data: new Uint8Array([0x90, 60, 100])
+    } as any);
+
+    expect(processStepperActionSpy).toHaveBeenCalledWith(12, true, expect.any(Function));
+    processStepperActionSpy.mockRestore();
+  });
+
+  it('Phase 2 - Test Case 2: Given size = 49, simulate NoteOn 48. Assert it routes to the Scale Select logic', async () => {
+    const mockInput = {
+      id: 'mock-input-1',
+      name: 'Mock MIDI Input',
+      onmidimessage: null as any,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    mockRequestMIDIAccess.mockResolvedValue({
+      inputs: {
+        values: () => [mockInput][Symbol.iterator](),
+        get: (_id: string) => mockInput,
+        size: 1,
+      },
+      outputs: {
+        values: () => [][Symbol.iterator](),
+        size: 0,
+      },
+      onstatechange: null,
+    });
+
+    useMidiStore.setState({
+      globalSettings: {
+        midiInPort: 'mock-input-1',
+        power: true,
+        channelFilter: 'ALL',
+        startOctave: 4,
+        roundPreference: 'UP',
+        filterMode: 'octave_wrap',
+        filterRange: [21, 108],
+        inputKeyboardSize: 49,
+      },
+      activeState: {
+        rootNote: 0,
+        scaleDecimalId: 2741,
+        lastPlayedMidi: 60,
+        keySwitches: [
+          { root: 'C', type: 'Major' },
+        ],
+        selectedScaleIndex: 0,
+        activeSwitchIndex: 0,
+      },
+      uiState: {
+        ...useMidiStore.getState().uiState,
+        activeKeys: [],
+        outputActiveKeys: [],
+      }
+    });
+
+    const setActiveStateSpy = vi.spyOn(useMidiStore.getState(), 'setActiveState');
+
+    renderHook(() => useWebMidi());
+
+    await vi.waitFor(() => {
+      expect(mockInput.onmidimessage).toBeTypeOf('function');
+    });
+
+    // NoteOn 48 is C3. In 49-key mode, Scale Select is 48-59.
+    // Index for scale key switches is note - 48 (index 0).
+    mockInput.onmidimessage({
+      data: new Uint8Array([0x90, 48, 100])
+    } as any);
+
+    expect(setActiveStateSpy).toHaveBeenCalled();
+    setActiveStateSpy.mockRestore();
   });
 });

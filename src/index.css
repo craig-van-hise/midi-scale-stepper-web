@@ -6,7 +6,9 @@
   font-display: block;
 }
 
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "../index.html";
+@source ".";
 
 @theme {
   --font-sans: 'Inter', sans-serif;

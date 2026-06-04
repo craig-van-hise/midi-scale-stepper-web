@@ -64,6 +64,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 
 ```
 .
+├── FONTS.md                   # Typography documentation
 ├── PDD.md                     # Product Design Document
 ├── PRD.md                     # Product Requirements Document
 ├── PROJECT_STATE.md           # Project state and module description
@@ -82,6 +83,7 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── Header.tsx         # Connection info and global control
 │   │   ├── HomeSettingsModal.tsx # Settings for MIDI mode selection
 │   │   ├── InfoModal.tsx      # Application information and guide
+│   │   ├── InputSettingsModal.tsx # Physical controller size configuration modal
 │   │   ├── KeySplitKeyboard.tsx # Interactive visual keyboard split preview
 │   │   ├── KeySwitchContainer.tsx # Swappable keyswitches/control zone
 │   │   ├── NoteRangeFilterKeyboard.tsx # Note range constraint filter setup
@@ -89,8 +91,10 @@ Finds the pitch class (`pc`) of the note, and transposes it to the nearest match
 │   │   ├── ScaleChangeSettingsModal.tsx # Scale change behavior settings modal
 │   │   ├── ScaleInspectorNotation.tsx # Music notation staff rendering
 │   │   ├── ScaleKeySwitches12.tsx # 12 Key switches selector
-│   │   ├── ScaleStepperKeySwitches25.tsx # 25 Stepper controls keyboard
-│   │   └── SettingsModal.tsx  # General and developer options
+│   │   ├── ScaleStepperKeySwitches24.tsx # 24 Stepper controls keyboard
+│   │   ├── SettingsModal.tsx  # General and developer options
+│   │   ├── StepperContextMenu.tsx # Context menu for mapping custom keyswitch actions
+│   │   └── keyboardMap.ts
 │   ├── hooks
 │   │   ├── useSynth.ts        # Built-in synthesizer engine
 │   │   └── useWebMidi.ts      # Web MIDI listener & dispatcher

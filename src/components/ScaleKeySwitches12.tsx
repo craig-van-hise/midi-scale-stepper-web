@@ -4,6 +4,8 @@ import { useMidiStore } from '../store/useMidiStore';
 import { calculateBitmaskDecimal } from '../utils/BitmaskCalculator';
 import { Settings } from 'lucide-react';
 import ScaleChangeSettingsModal from './ScaleChangeSettingsModal';
+import { getScaleRootName } from '../utils/scaleSpeller';
+import { getLUT } from '../utils/lutRegistry';
 
 export interface ScaleSwitchData {
   root: string;
@@ -121,15 +123,15 @@ const getBlackStyle = (isSelected: boolean): React.CSSProperties => ({
 const ScaleKeySwitches12: React.FC = () => {
   const scales = useMidiStore((state) => state.activeState.keySwitches);
   const setScalesStore = useMidiStore((state) => state.setKeySwitches);
-  
+
   const setScales = (updater: ScaleSwitchData[] | ((prev: ScaleSwitchData[]) => ScaleSwitchData[])) => {
     const current = useMidiStore.getState().activeState.keySwitches;
     const next = typeof updater === 'function' ? updater(current) : updater;
     setScalesStore(next);
   };
-  
+
   const selectedIndex = useMidiStore((state) => state.activeState.activeSwitchIndex);
-  
+
   const [isRootMenuOpen, setIsRootMenuOpen] = useState<boolean>(false);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -137,7 +139,7 @@ const ScaleKeySwitches12: React.FC = () => {
   const [typeMenuCoords, setTypeMenuCoords] = useState({ top: 0, left: 0 });
 
   const rootMenuRef = useRef<HTMLDivElement>(null);
-  
+
   const activeScale = scales[selectedIndex];
 
   // Explicit push to Zustand — called ONLY on human click events, never passively
@@ -197,23 +199,36 @@ const ScaleKeySwitches12: React.FC = () => {
     pushScaleToStore(updated[selectedIndex]);
   };
 
+  const getDisplayRoot = (naiveRoot: string, scaleType: string) => {
+    const pc = NOTE_TO_PC[naiveRoot];
+    if (pc === undefined) return naiveRoot;
+
+    const pcs = STANDARD_PITCH_CLASSES[scaleType] || STANDARD_PITCH_CLASSES['Major'];
+    const decimalId = calculateBitmaskDecimal(pcs);
+
+    // Fetch the specific scale rules from the loaded database
+    const entry = getLUT()[decimalId] || null;
+
+    return getScaleRootName(pc, entry);
+  };
+
   return (
-    <div 
+    <div
       data-scales-count={scales.length}
       data-selected-index={selectedIndex}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'transparent', padding: '0px', width: '567px' }}
       className="h-full justify-between"
     >
       {/* Top Strip */}
-      <div 
+      <div
         id="scale-key-switches-strip"
-        style={{ 
-          width: '567px', 
+        style={{
+          width: '567px',
           height: '34px',
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          backgroundColor: '#fff', 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#fff',
           marginBottom: '5px',
           fontFamily: "'Roboto Mono', monospace",
           fontSize: '18px',
@@ -225,33 +240,33 @@ const ScaleKeySwitches12: React.FC = () => {
           zIndex: 300
         }}
       >
-        <span 
+        <span
           data-testid="top-strip-root"
           className="cursor-pointer hover:opacity-75 text-orange-500 px-1"
           style={{ position: 'relative' }}
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             // Anchor to bottom center of the trigger
-            setRootMenuCoords({ 
-              top: rect.bottom + window.scrollY + 8, 
-              left: rect.left + window.scrollX + (rect.width / 2) 
+            setRootMenuCoords({
+              top: rect.bottom + window.scrollY + 8,
+              left: rect.left + window.scrollX + (rect.width / 2)
             });
             setIsRootMenuOpen(!isRootMenuOpen);
             setIsTypeMenuOpen(false);
           }}
         >
-          {activeScale.root}
+          {getDisplayRoot(activeScale.root, activeScale.type)}
         </span>
         <span className="mx-1.5 font-normal text-gray-400">|</span>
-        <span 
+        <span
           data-testid="top-strip-type"
           className="cursor-pointer hover:opacity-75 text-black px-1"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             // Anchor to bottom right of the trigger
-            setTypeMenuCoords({ 
-              top: rect.bottom + window.scrollY + 8, 
-              left: rect.right + window.scrollX 
+            setTypeMenuCoords({
+              top: rect.bottom + window.scrollY + 8,
+              left: rect.right + window.scrollX
             });
             setIsTypeMenuOpen(!isTypeMenuOpen);
             setIsRootMenuOpen(false);
@@ -299,7 +314,7 @@ const ScaleKeySwitches12: React.FC = () => {
             >
               {/* White key text labels */}
               <div className="text-[15px] text-center leading-none text-black select-none pointer-events-none">
-                <div className="font-bold text-orange-500">{scales[noteIndex].root}</div>
+                <div className="font-bold text-orange-500">{getDisplayRoot(scales[noteIndex].root, scales[noteIndex].type)}</div>
                 <div style={{ fontSize: '12px' }} className="mt-0.5 opacity-80">{scales[noteIndex].type}</div>
               </div>
 
@@ -325,7 +340,7 @@ const ScaleKeySwitches12: React.FC = () => {
                   }}
                 >
                   <div className={`text-[12px] text-center leading-none select-none pointer-events-none ${selectedIndex === blackIndex ? 'text-black' : 'text-white'}`}>
-                    <div className="font-bold text-orange-500">{scales[blackIndex].root}</div>
+                    <div className="font-bold text-orange-500">{getDisplayRoot(scales[blackIndex].root, scales[blackIndex].type)}</div>
                     <div style={{ fontSize: '9px' }} className="mt-0.5 opacity-80">{scales[blackIndex].type}</div>
                   </div>
                 </div>
@@ -333,24 +348,24 @@ const ScaleKeySwitches12: React.FC = () => {
             </div>
           );
         })}
-        <div 
+        <div
           id="shadow-blocker-strip"
           style={{
             position: 'absolute',
-            top: '-10px', 
+            top: '-10px',
             left: 0,
             width: '100%',
             height: '10px',
-            backgroundColor: '#1a1a1a', 
+            backgroundColor: '#1a1a1a',
             zIndex: 200,
             pointerEvents: 'none'
-          }} 
+          }}
         />
       </div>
       <ScaleChangeSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {isRootMenuOpen && createPortal(
-        <div 
+        <div
           ref={rootMenuRef}
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -393,7 +408,7 @@ const ScaleKeySwitches12: React.FC = () => {
       )}
 
       {isTypeMenuOpen && createPortal(
-        <div 
+        <div
           onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',

@@ -2,8 +2,8 @@ export const ZONES = {
   HOME: { min: 21, max: 23 },
   ROOT: { min: 24, max: 35 },
   SCALE: { min: 36, max: 47 },
-  STEPPER: { min: 48, max: 72 },
-  PLAY_START: { min: 73, max: 108 },
+  STEPPER: { min: 48, max: 71 },
+  PLAY_START: { min: 72, max: 108 },
 } as const;
 
 export interface PlayStartSettings {
@@ -68,6 +68,7 @@ export interface MidiState {
     roundPreference: 'UP' | 'DOWN';
     filterMode: 'octave_wrap' | 'smart_wrap';
     filterRange: [number, number];
+    inputKeyboardSize: 49 | 88;
   };
   activeState: ActiveState;
   uiState: {
@@ -95,6 +96,7 @@ export interface MidiStoreActions {
   setRoundPreference: (pref: 'UP' | 'DOWN') => void;
   setFilterMode: (mode: 'octave_wrap' | 'smart_wrap') => void;
   setFilterRange: (range: [number, number]) => void;
+  setInputKeyboardSize: (size: 49 | 88) => void;
   
   setRootNote: (note: number | null) => void;
   setScaleDecimalId: (decimalId: number | null) => void;
@@ -103,6 +105,7 @@ export interface MidiStoreActions {
   setSelectedScaleIndex: (index: number) => void;
   setActiveState: (activeState: Partial<ActiveState>) => void;
   setIsFirstNote: (isFirst: boolean) => void;
+  updateActiveKeySwitchFromNotation: (newRoot: number, newDecimal: number) => void;
 
   addActiveKey: (key: number) => void;
   removeActiveKey: (key: number) => void;
@@ -119,7 +122,7 @@ export interface MidiStoreActions {
   updateHomeSettings: (settings: Partial<{ audible: boolean }>) => void;
   triggerHomeReset: () => void;
   setScaleChangeMode: (mode: 'voice-leading' | 'follow-root') => void;
-  
+  updateStepperConfig: (index: number, newAction: StepperAction) => void;
   // Custom reset action for "Panic"
   panic: () => void;
 }

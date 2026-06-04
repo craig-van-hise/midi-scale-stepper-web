@@ -29,6 +29,7 @@ describe('ScaleInspectorNotation Click-to-Play', () => {
         activeSwitchIndex: 0,
       },
       uiState: {
+        ...useMidiStore.getState().uiState,
         activeKeys: [],
         outputActiveKeys: [],
       }
@@ -96,5 +97,29 @@ describe('ScaleInspectorNotation Click-to-Play', () => {
     expect(noteheads[1].style.color).toBe('rgb(168, 85, 247)');
     // Assert index 0 is not selected
     expect(noteheads[0].style.color).not.toBe('rgb(168, 85, 247)');
+  });
+
+  it('Phase 1 Test Case 1: Render the component and assert that the Scale Name Header element has a computed style or inline style containing var(--font-display)', () => {
+    const { getByTestId } = render(<NotationModule.ScaleInspectorNotation />);
+    const header = getByTestId('scale-name-header');
+    expect(header.style.fontFamily).toBe('var(--font-display)');
+  });
+
+  it('Phase 2 Test Case 1: Query [data-testid="note-name-label"] and assert its style contains var(--font-sans)', () => {
+    const { getAllByTestId } = render(<NotationModule.ScaleInspectorNotation />);
+    const labels = getAllByTestId('note-name-label');
+    expect(labels.length).toBeGreaterThan(0);
+    labels.forEach(label => {
+      expect(label.style.fontFamily).toBe('var(--font-sans)');
+    });
+  });
+
+  it('Phase 3 Test Case 1: Query the interval label elements and assert their font family is precisely "\'Roboto Mono\', monospace"', () => {
+    const { getAllByTestId } = render(<NotationModule.ScaleInspectorNotation />);
+    const labels = getAllByTestId('interval-label');
+    expect(labels.length).toBeGreaterThan(0);
+    labels.forEach(label => {
+      expect(label.style.fontFamily.replace(/"/g, "'")).toBe("'Roboto Mono', monospace");
+    });
   });
 });

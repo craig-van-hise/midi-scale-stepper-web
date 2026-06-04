@@ -1,16 +1,9 @@
 
 /Users/vv2024/Documents/Repos - vv2024/MIDI/WebApps/midi-scale-stepper
 ├── # Prompts
-|  ├── # 36.md
-|  ├── # 37.md
-|  ├── # 38.md
-|  ├── # 39.md
-|  ├── # 40.md
-|  ├── # 41.md
-|  ├── # 42.md
-|  ├── # 43.md
-|  ├── # 44.md
-|  ├── # 45.md
+|  ├── # 61.md
+|  ├── # 62.md
+|  ├── # 63.md
 |  ├── WOs
 |  |  └── MIDI-Scale-Stepper-MVP
 |  |     ├── Phase_1
@@ -61,12 +54,38 @@
 |     ├── # 33.md
 |     ├── # 34.md
 |     ├── # 35.md
+|     ├── # 36.md
+|     ├── # 37.md
+|     ├── # 38.md
+|     ├── # 39.md
 |     ├── # 4.md
+|     ├── # 40.md
+|     ├── # 41.md
+|     ├── # 42.md
+|     ├── # 43.md
+|     ├── # 44.md
+|     ├── # 45.md
+|     ├── # 46.md
+|     ├── # 47.md
+|     ├── # 48.md
+|     ├── # 49.md
 |     ├── # 5.md
+|     ├── # 50.md
+|     ├── # 51.md
+|     ├── # 52.md
+|     ├── # 53.md
+|     ├── # 54.md
+|     ├── # 55.md
+|     ├── # 56.md
+|     ├── # 57.md
+|     ├── # 58.md
+|     ├── # 59.md
 |     ├── # 6.md
+|     ├── # 60.md
 |     ├── # 7.md
 |     ├── # 8.md
 |     └── # 9.md
+├── FONTS.md
 ├── PDD.md
 ├── PRD.md
 ├── PROJECT_CONTEXT_BUNDLE.md
@@ -89,6 +108,8 @@
 |  |  ├── Header.tsx
 |  |  ├── HomeSettingsModal.tsx
 |  |  ├── InfoModal.tsx
+|  |  ├── InputSettingsModal.test.tsx
+|  |  ├── InputSettingsModal.tsx
 |  |  ├── KeySplitKeyboard.test-helper.ts
 |  |  ├── KeySplitKeyboard.test.tsx
 |  |  ├── KeySplitKeyboard.tsx
@@ -104,10 +125,12 @@
 |  |  ├── ScaleInspectorNotation.tsx
 |  |  ├── ScaleKeySwitches12.test.tsx
 |  |  ├── ScaleKeySwitches12.tsx
-|  |  ├── ScaleStepperKeySwitches25.test.tsx
-|  |  ├── ScaleStepperKeySwitches25.tsx
+|  |  ├── ScaleStepperKeySwitches24.test.tsx
+|  |  ├── ScaleStepperKeySwitches24.tsx
 |  |  ├── SettingsModal.test.tsx
 |  |  ├── SettingsModal.tsx
+|  |  ├── StepperContextMenu.test.tsx
+|  |  ├── StepperContextMenu.tsx
 |  |  └── keyboardMap.ts
 |  ├── hooks
 |  |  ├── useSynth.ts
@@ -138,7 +161,7 @@
 ├── tsconfig.json
 └── vite.config.ts
 
-directory: 463 file: 3579
+directory: 463 file: 3602
 
 ignored: directory (69)
 

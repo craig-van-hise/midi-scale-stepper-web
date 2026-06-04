@@ -42,7 +42,7 @@ export function executeScaleStep(stepOffset: number) {
   const lut = getLUT();
   const entry = scaleDecimalId !== null ? lut[scaleDecimalId] : null;
 
-  if (!entry) return;
+  if (!entry) return null;
 
   const pitch_classes = entry.pitch_class_set;
   const root = rootNote ?? 0;

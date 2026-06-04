@@ -54,18 +54,6 @@ const getScaleTypeString = (decimalId: number): string => {
   return (lut && lut[decimalId] && lut[decimalId].scale_type) ? lut[decimalId].scale_type : 'Major';
 };
 
-const syncKeySwitches = (state: any, newRoot?: number | null, newDecimal?: number | null) => {
-  const idx = state.activeState.activeSwitchIndex;
-  const currentRoot = (newRoot !== undefined && newRoot !== null) ? newRoot : (state.activeState.rootNote ?? 0);
-  const currentDecimal = (newDecimal !== undefined && newDecimal !== null) ? newDecimal : (state.activeState.scaleDecimalId ?? 2741);
-  
-  const updatedSwitches = [...state.activeState.keySwitches];
-  updatedSwitches[idx] = {
-    root: getRootString(currentRoot),
-    type: getScaleTypeString(currentDecimal)
-  };
-  return updatedSwitches;
-};
 
 const computeNewLastPlayedMidi = (
   state: any,
@@ -113,6 +101,7 @@ export const useMidiStore = create<MidiStore>((set) => ({
     roundPreference: 'UP',
     filterMode: 'smart_wrap',
     filterRange: [36, 83],
+    inputKeyboardSize: 88,
   },
   activeState: {
     rootNote: 0,
@@ -146,6 +135,15 @@ export const useMidiStore = create<MidiStore>((set) => ({
   setMidiInPort: (portId) =>
     set((state) => ({
       globalSettings: { ...state.globalSettings, midiInPort: portId },
+    })),
+
+  setInputKeyboardSize: (size) =>
+    set((state) => ({
+      globalSettings: { ...state.globalSettings, inputKeyboardSize: size },
+      playStartSettings: {
+        ...state.playStartSettings,
+        octaveOffset: size === 49 ? -1 : -2,
+      },
     })),
 
   setPower: (power) =>
@@ -207,7 +205,6 @@ export const useMidiStore = create<MidiStore>((set) => ({
           rootNote: note,
           lastPlayedMidi: nextLastPlayedMidi,
           isFirstNote,
-          keySwitches: syncKeySwitches(state, note, undefined)
         },
       };
     }),
@@ -222,7 +219,6 @@ export const useMidiStore = create<MidiStore>((set) => ({
           scaleDecimalId: decimalId,
           lastPlayedMidi: nextLastPlayedMidi,
           isFirstNote,
-          keySwitches: syncKeySwitches(state, undefined, decimalId)
         },
       };
     }),
@@ -261,7 +257,6 @@ export const useMidiStore = create<MidiStore>((set) => ({
           ...nextActive, 
           lastPlayedMidi: finalLastPlayed,
           isFirstNote,
-          keySwitches: syncKeySwitches(state, activeState.rootNote, activeState.scaleDecimalId)
         },
       };
     }),
@@ -512,6 +507,34 @@ export const useMidiStore = create<MidiStore>((set) => ({
         activeState: {
           ...state.activeState,
           lastPlayedMidi: nextLastPlayedMidi
+        }
+      };
+    }),
+
+  updateStepperConfig: (index, newAction) =>
+    set((state) => {
+      const nextStepperConfig = [...state.uiState.stepperConfig];
+      nextStepperConfig[index] = newAction;
+      return {
+        uiState: {
+          ...state.uiState,
+          stepperConfig: nextStepperConfig
+        }
+      };
+    }),
+
+  updateActiveKeySwitchFromNotation: (newRoot: number, newDecimal: number) => 
+    set((state) => {
+      const idx = state.activeState.activeSwitchIndex;
+      const updatedSwitches = [...state.activeState.keySwitches];
+      updatedSwitches[idx] = {
+        root: getRootString(newRoot),
+        type: getScaleTypeString(newDecimal)
+      };
+      return {
+        activeState: { 
+          ...state.activeState, 
+          keySwitches: updatedSwitches 
         }
       };
     }),
